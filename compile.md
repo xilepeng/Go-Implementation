@@ -1,8 +1,8 @@
 
 
 
-![](/Users/x/go/src/Go-Share/images/1.png)
 
+![](./images/1.png)
 ```go
 $ cat x.go
 package main
@@ -56,7 +56,7 @@ $ go tool compile -S x.go  # or: go build -gcflags -S x.go
 ```
 
 
-![](/Users/x/go/src/Go-Share/images/2.png)
+![](./images/2.png)
 
 ```go
 $ go build -o x x.go
