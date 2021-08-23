@@ -1,8 +1,49 @@
 
+## 编译
+
+⽣成⽬标⽂件，分编译（compile）和链接（link）两步。
+
+1. 编译器参数：
+
+```go
+$ go build [-o output] [build flags] [packages]
+
+```
+-o : ⽬标⽂件名。
+-n : 显示编译命令，但不执⾏。
+-x : 显示正在执⾏的编译命令。
+-gcflags : 传递给编译器的参数列表。
+-ldflags : 传递给链接器的参数列表。
+
+
+
+```go
+$ go tool compile -h
+```
+
+-N : 禁⽤优化（optimizations）。
+-l : 禁⽤内联（inlining）。
+-S : 输出汇编。
+-m : 输出优化决策（ -m=2 或 -m -m 输出更详细信息）。
+
+2. 链接器参数：
+
+```go
+$ go tool link -h
+```
+-s: 禁⽤符号表（symbol table）。
+-w: 禁⽌⽣成调试信息（DWARF）。
+
+
+
+
+
 
 
 
 ![](./images/1.png)
+
+
 ```go
 $ cat x.go
 package main
@@ -56,7 +97,10 @@ $ go tool compile -S x.go  # or: go build -gcflags -S x.go
 ```
 
 
+
+
 ![](./images/2.png)
+
 
 ```go
 $ go build -o x x.go
@@ -90,3 +134,14 @@ TEXT main.main(SB) /Users/x/go/src/demo/x.go
   x.go:5		0x10a31a0		e8dbf3fbff		CALL runtime.morestack_noctxt(SB)
   x.go:5		0x10a31a5		e976ffffff		JMP main.main(SB)
 ```
+
+
+
+
+
+- FP: Frame pointer: arguments and locals.
+- PC: Program counter: jumps and branches.
+- SB: Static base pointer: global symbols.
+- SP: Stack pointer: the highest address within the local stack frame.
+
+
