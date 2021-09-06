@@ -1,19 +1,7 @@
 
 # 深入 Go 并发原语 — Channel 底层实现
 
-1. 什么是 CSP
-2. channel 底层的数据结构是什么 
-3. channel 发送和接收元素的本质是什么 
-4. 从 channel 接收数据的过程是怎样的 
-5. channel 在什么情况下会引起资源泄漏 
-6. channel 有哪些应用 
-7. 从一个关闭的 channel 仍然能读出数据吗 
-8. 关于 channel 的 happened-before 有哪些 
-9. 关闭一个 channel 的过程是怎样的 
-10. 向 channel 发送数据的过程是怎样的 
-11. 如何优雅地关闭 channel 
-12. 操作 channel 的情况总结
-13. 手写 worker pool（goroutine池）
+
 
 ## 1. 什么是 CSP ？
 
@@ -70,10 +58,10 @@ sum 这个结构体不想将内部的变量暴露在结构体之外，所以使�
 输出数据给其他使用方的目的是转移数据的使用权。并发安全的实质是保证同时只有一个并发上下文拥有数据的所有权。channel 可以很方便的将数据所有权转给其他使用方。另一个优势是组合型。如果使用 sync 里面的锁，想实现组合多个逻辑并且保证并发安全，是比较困难的。但是使用 channel + select 实现组合逻辑实在太方便了。以上就是 CSP 的基本概念和何时选择 channel 的时机。下一章从 channel 基本数据结构开始详细分析 channel 底层源码实现。
 
 
-# 以下代码基于 Go 1.17
+### 以下代码基于 Go 1.17
 
-## 2. channel 底层的数据结构是什么 ？
-### 二. 基本数据结构
+
+## 2. 基本数据结构
 channel 的底层源码和相关实现在 src/runtime/chan.go 中。
 
 ```go
@@ -99,27 +87,111 @@ type hchan struct {
 }
 ```
 
-## 3. channel 发送和接收元素的本质是什么 
+lock 锁保护 hchan 中的所有字段，以及此通道上被阻塞的 sudogs 中的多个字段。
+持有 lock 的时候，禁止更改另一个 G 的状态（特别是不要使 G 状态变成ready），因为这会因为堆栈 shrinking 而发生死锁。
 
-## 4. 从 channel 接收数据的过程是怎样的 
 
-## 5. channel 在什么情况下会引起资源泄漏 
 
-## 6. channel 有哪些应用 
 
-## 7. 从一个关闭的 channel 仍然能读出数据吗 
 
-## 8. 关于 channel 的 happened-before 有哪些 
 
-## 9. 关闭一个 channel 的过程是怎样的 
 
-## 10. 向 channel 发送数据的过程是怎样的 
 
-## 11. 如何优雅地关闭 channel 
 
-## 12. 操作 channel 的情况总结
 
-## 13. 手写 worker pool（goroutine池）
+
+recvq 和 sendq 是等待队列，waitq 是一个双向链表：
+
+```go
+type waitq struct {
+	first *sudog
+	last  *sudog
+}
+```
+
+channel 最核心的数据结构是 sudog。sudog 代表了一个在等待队列中的 g。sudog 是 Go 中非常重要的数据结构，因为 g 与同步对象关系是多对多的。一个 g 可以出现在许多等待队列上，因此一个 g 可能有很多sudog。并且多个 g 可能正在等待同一个同步对象，因此一个对象可能有许多 sudog。sudog 是从特殊池中分配出来的。使用 acquireSudog 和 releaseSudog 分配和释放它们。
+
+
+```go
+// sudog represents a g in a wait list, such as for sending/receiving
+// on a channel.
+//
+// sudog is necessary because the g ↔ synchronization object relation
+// is many-to-many. A g can be on many wait lists, so there may be
+// many sudogs for one g; and many gs may be waiting on the same
+// synchronization object, so there may be many sudogs for one object.
+//
+// sudogs are allocated from a special pool. Use acquireSudog and
+// releaseSudog to allocate and free them.
+type sudog struct {
+	// The following fields are protected by the hchan.lock of the
+	// channel this sudog is blocking on. shrinkstack depends on
+	// this for sudogs involved in channel ops.
+
+	g *g
+
+	next *sudog
+	prev *sudog
+	elem unsafe.Pointer // data element (may point to stack)
+
+	// The following fields are never accessed concurrently.
+	// For channels, waitlink is only accessed by g.
+	// For semaphores, all fields (including the ones above)
+	// are only accessed when holding a semaRoot lock.
+
+	acquiretime int64
+	releasetime int64
+	ticket      uint32
+
+	// isSelect indicates g is participating in a select, so
+	// g.selectDone must be CAS'd to win the wake-up race.
+	isSelect bool
+
+	// success indicates whether communication over channel c
+	// succeeded. It is true if the goroutine was awoken because a
+	// value was delivered over channel c, and false if awoken
+	// because c was closed.
+	success bool
+
+	parent   *sudog // semaRoot binary tree
+	waitlink *sudog // g.waiting list or semaRoot
+	waittail *sudog // semaRoot
+	c        *hchan // channel
+}
+```
+
+sudog 中所有字段都受 hchan.lock 保护。acquiretime、releasetime、ticket 这三个字段永远不会被同时访问。对 channel 来说，waitlink 只由 g 使用。对 semaphores 来说，只有在持有 semaRoot 锁的时候才能访问这三个字段。isSelect 表示 g 是否被选择，g.selectDone 必须进行 CAS 才能在被唤醒的竞争中胜出。success 表示 channel c 上的通信是否成功。如果 goroutine 在 channel c 上传了一个值而被唤醒，则为 true；如果因为 c 关闭而被唤醒，则为 false。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## 练习
+
+1. 什么是 CSP
+2. channel 底层的数据结构是什么
+3. channel 发送和接收元素的本质是什么
+4. 从 channel 接收数据的过程是怎样的
+5. channel 在什么情况下会引起资源泄漏
+6. channel 有哪些应用
+7. 从一个关闭的 channel 仍然能读出数据吗
+8. 关于 channel 的 happened-before 有哪些
+9. 关闭一个 channel 的过程是怎样的
+10. 向 channel 发送数据的过程是怎样的
+11. 如何优雅地关闭 channel
+12. 操作 channel 的情况总结
+13. 手写 worker pool（goroutine池）
+
+
 
 
 

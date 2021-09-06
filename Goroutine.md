@@ -26,11 +26,10 @@ sysmon 后台监控线程做了什么
 描述 scheduler 的初始化过程
 
 
-
-
+- M: OS thread
 - G: goroutine
-- M: OS thread (machine)
-- P: processor （Go中定义的一个摡念，不是指CPU），包含运行Go代码的必要资源，也有调度goroutine的能力。
+- P: context for scheduling
+
 
 
 
