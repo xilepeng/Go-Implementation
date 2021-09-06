@@ -3,6 +3,7 @@
 - [ASM](asm.md)
 - [Goroutine](Goroutine.md)
 - [Channel](channel.md)
+- [GC](gc.md)
 
 
 
