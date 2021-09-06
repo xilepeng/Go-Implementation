@@ -93,10 +93,10 @@ lock 锁保护 hchan 中的所有字段，以及此通道上被阻塞的 sudogs 
 
 
 
+![](./images/chan1.png)
 
 
-
-
+![](./images/chan2.png)
 
 
 
@@ -161,6 +161,18 @@ type sudog struct {
 ```
 
 sudog 中所有字段都受 hchan.lock 保护。acquiretime、releasetime、ticket 这三个字段永远不会被同时访问。对 channel 来说，waitlink 只由 g 使用。对 semaphores 来说，只有在持有 semaRoot 锁的时候才能访问这三个字段。isSelect 表示 g 是否被选择，g.selectDone 必须进行 CAS 才能在被唤醒的竞争中胜出。success 表示 channel c 上的通信是否成功。如果 goroutine 在 channel c 上传了一个值而被唤醒，则为 true；如果因为 c 关闭而被唤醒，则为 false。
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
