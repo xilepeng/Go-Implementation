@@ -1,32 +1,19 @@
-
-
-# Go-Share
-
-- [Goroutine](Goroutine.md)     2021.9.1
-- [Channel](channel.md)     2021.9.5
-
-****   2021.9.7
-- [Map](map.md) 2021.9.8
-- [Interface](Interface.md)
-- [reflection](reflection.md)
-- [Build and Link](build.md)
-- [lib](lib.md)
-- [GC](gc.md)
-- [ASM](asm.md)
+## Go 语言底层原理
 
 
 
 | 每天最重要的一件事          | 开始时间 | 完成时间 |
-| :-------------------------- | -------- | -------- |
-| [Slice and Array](slice.md) |  2021年9月7日 12:16:41        |          |
-|                             |          |          |
-|                             |          |          |
-|                             |          |          |
-|                             |          |          |
-|                             |          |          |
-|                             |          |          |
-|                             |          |          |
-|                             |          |          |
+| :-------------------------: | :------: | :------: |
+| [Slice](slice.md) |  2021年9月7日 12:16:41 | 2021年9月7日 20:16:41 |
+| [Map](map.md)               |          |          |
+| [Interface](Interface.md) |          |          |
+| [Channel](channel.md) |          |          |
+| [Goroutine](Goroutine.md) |          |          |
+| [Reflection](reflection.md) |          |          |
+| [Build and Link](build.md) |          |          |
+| [Lib](lib.md) |          |          |
+| [ASM](asm.md) | | |
+
 
 
 
