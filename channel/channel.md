@@ -93,10 +93,10 @@ lock 锁保护 hchan 中的所有字段，以及此通道上被阻塞的 sudogs 
 
 
 
-![](./images/chan1.png)
+![](../images/chan1.png)
 
 
-![](./images/chan2.png)
+![](../images/chan2.png)
 
 
 
