@@ -1,32 +1,17 @@
 ## Go 语言底层原理
 
 
+* ✅ [Goroutine](Goroutine.md)
+* ✅ [Channel](channel.md)
+* ✅ [Slice](slice.md)
+*  [Map](map.md)
+* [Interface](Interface.md) 
+* [Reflection](reflection.md) 
+* [Build and Link](build.md) 
+* [Lib](lib.md) 
+* ✅ [ASM](asm.md) 
 
-|            目标             |       开始时间        |       是否完成        |
-| :-------------------------: | :-------------------: | :-------------------: |
-|  [Goroutine](Goroutine.md)  | 2021年9月1日 07:11:22 |          [%]          |
-|    [Channel](channel.md)    | 2021年9月5日 06:21:50 | 2021年9月6日 22:50:23 |
-|      [Slice](slice.md)      | 2021年9月8日 07:29:45 | 2021年9月8日 22:08:45 |
-|        [Map](map.md)        |     2021年9月8日      |                       |
-|  [Interface](Interface.md)  |     2021年9月10日     |                       |
-| [Reflection](reflection.md) |     2021年9月11日     |                       |
-| [Build and Link](build.md)  |     2021年9月12日     |                       |
-|        [Lib](lib.md)        |     2021年9月13日     |                       |
-|        [ASM](asm.md)        |     2021年9月14日     |                       |
 
--[] 未完成
 
--[x] 完成
 
-[x]
-[%]
-
-[+]
-
-[#]
-
-<!-- 尚未开始的任务，文本行以[-]开头；
-正在进行的任务，文本行以[%]开头；
-已经完成的任务，文本行以[+]开头；
-已经废弃的任务，文本行以[#]开头。 -->
 
