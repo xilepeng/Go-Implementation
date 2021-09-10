@@ -1,5 +1,5 @@
 
-### 以下代码基于 Go 1.17
+[toc]
 
 
 ## ✏1. Array 数组
@@ -19,7 +19,7 @@ func main() {
 // Array2 的数据类型：[2]int
 ```
 
-### 📝Array 和 Slice 有什么区别？
+## 📝 1. Array 和 Slice 有什么区别？
 
 1. **Slice 的底层数据是数组, Slice 是对底层数组进行了封装，它描述一个数组的片段。**
 两者都可以通过下标来访问单个元素。
@@ -34,6 +34,8 @@ func main() {
 
 
 ## 📝 2. Slice 基本数据结构
+
+以下代码基于 Go 1.17
 
  slice 的底层源码和相关实现在 src/runtime/slice.go
 
