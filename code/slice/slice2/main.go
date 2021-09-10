@@ -15,14 +15,15 @@ func main() {
 
 	s1[2] = 20
 
-	fmt.Println(s1)
-	fmt.Println(s2)
-	fmt.Println(slice)
+	fmt.Println("slice = ", slice)
+	fmt.Println("s1 = ", s1)
+	fmt.Println("s2 = ", s2)
+
 }
 
 // s1: len=3, cap=8
 // s2: len=4, cap=5
 //         扩容后 s2: len=6, cap=10
-// [2 3 20]
-// [4 5 6 7 100 200]
-// [0 1 2 3 20 5 6 7 100 9]
+// slice =  [0 1 2 3 20 5 6 7 100 9]
+// s1 =  [2 3 20]
+// s2 =  [4 5 6 7 100 200]
