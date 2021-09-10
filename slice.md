@@ -118,10 +118,13 @@ type slice struct {
 
 **nil 切片**
 
+
 ```go
 	var nil_slice []int
 ```
 ![](images/c1.png)
+
+nil 切片被用在很多标准库和内置函数中，描述一个不存在的切片的时候，就需要用到 nil 切片。比如函数在发生异常的时候，返回的切片就是 nil 切片。nil 切片的指针指向 nil。
 
 
 **空切片**
@@ -133,7 +136,9 @@ type slice struct {
 
 ![](images/c2.png)
 
-**new切片**
+空切片一般会用来表示一个空的集合。比如数据库查询，一条结果也没有查到，那么就可以返回一个空切片。
+
+**指针切片**
 
 ```go
 	new_slice := new([]string)
@@ -155,7 +160,7 @@ type slice struct {
 
 
 
-
+**深入理解slice**
 ```go
 package main
 
