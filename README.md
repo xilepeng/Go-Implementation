@@ -29,7 +29,7 @@
 1. 📝 [Goroutine](Goroutine.md)
 1. 📝 [Channel](channel.md)
 1. ✅ [Slice](slice.md) 
-1. # [Map](map.md)  
+1. # [Map](Map.md)  
 1. [String](String.md)
 1. [for and range]()
 1. [select]()
