@@ -403,7 +403,44 @@ func slicecopy(toPtr unsafe.Pointer, toLen int, fromPtr unsafe.Pointer, fromLen 
 
 ## 在函数间传递切片
 
+在函数间传递切片就是要在 **函数间以值的方式传递切片。** 由于切片的尺寸很小，在函数间复制和传递切片成本也很低。
 
+让我们创建一个大切片，并将这个切片以值的方式传递给函数 foo。
+
+**在函数间传递切片：**
+```go
+package main
+
+import "fmt"
+
+func main() {
+	slice := make([]int, 1e6)
+	fmt.Printf("slice pointer = %p\n", &slice)
+	slice = foo(slice)
+	fmt.Printf("slice pointer = %p\n", &slice)
+}
+func foo(slice []int)[]int{
+	return slice
+}
+```
+
+打印结果：
+```go
+slice pointer = 0xc00011a018
+slice pointer = 0xc00011a018
+
+```
+
+在 64 位架构的机器上，一个切片需要 24 字节的内存：指针字段需要 8 字节，长度和容量
+字段分别需要 8 字节。由于与切片关联的数据包含在底层数组里，不属于切片本身，所以将切片
+复制到任意函数的时候，对底层数组大小都不会有影响。复制时只会复制切片本身，不会涉及底
+层数组。
+
+![函数调用之后两个切片指向同一个底层数组](images/s5.png)
+
+
+在函数间传递 24 字节的数据会非常快速、简单。这也是切片效率高的地方。不需要传递指
+针和处理复杂的语法，只需要复制切片，按想要的方式修改数据，然后传递回一份新的切片副本。
 
 
 

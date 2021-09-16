@@ -1,8 +1,37 @@
 
 # Go ASM (Go Assembler - Go 汇编)
 
+go 1.17  src/stack.go
+```go
 
-
+// Stack frame layout
+//
+// (x86)
+// +------------------+
+// | args from caller |
+// +------------------+ <- frame->argp
+// |  return address  |
+// +------------------+
+// |  caller's BP (*) | (*) if framepointer_enabled && varp < sp
+// +------------------+ <- frame->varp
+// |     locals       |
+// +------------------+
+// |  args to callee  |
+// +------------------+ <- frame->sp
+//
+// (arm)
+// +------------------+
+// | args from caller |
+// +------------------+ <- frame->argp
+// | caller's retaddr |
+// +------------------+ <- frame->varp
+// |     locals       |
+// +------------------+
+// |  args to callee  |
+// +------------------+
+// |  return address  |
+// +------------------+ <- frame->sp
+```
 
 
 ## plan9 汇编
