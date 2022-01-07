@@ -35,8 +35,8 @@ hash table 是计算机数据结构中一个最重要的设计。大部分 hash 
 
 **Go 语言 map 采用的是哈希查找表，并且使用链表解决哈希冲突。**
 
-代码基于 
-go version go1.17 darwin/amd64
+代码基于
+go version go1.17.5 darwin/amd64
 
 
 Go 的 map 实现在 src/runtime/map.go 这个文件中。
@@ -44,6 +44,11 @@ Go 的 map 实现在 src/runtime/map.go 这个文件中。
 map 底层实质还是一个 hash table。
 
 先来看看 Go 定义了一些常量。
+
+```shell
+➜  ~ cd /usr/local/Cellar/go/1.17.5/libexec/src
+➜  src code .
+```
 
 ```go
 
@@ -54,9 +59,9 @@ const (
 
 	// 触发扩容操作的最大装载因子的临界值是 6.5
 	// Represent as loadFactorNum/loadFactorDen, to allow integer math.
-	loadFactorNum = 13	
+	loadFactorNum = 13
 	loadFactorDen = 2
-	
+
 	// 为了保持内联，键 和 值 的最大长度都是128字节，如果超过了128个字节，就存储它的指针
 	maxKeySize  = 128
 	maxElemSize = 128
@@ -73,7 +78,7 @@ const (
 	evacuatedX     = 2 // 键值对有效，并且已经迁移了一个表的前半段
 	evacuatedY     = 3 // 键值对有效，并且已经迁移了一个表的后半段
 	evacuatedEmpty = 4 // cell是空的，并且桶内的键值被迁移走了
-	minTopHash     = 5 // 最小的 tophash 
+	minTopHash     = 5 // 最小的 tophash
 
 	// flags 标记
 	iterator     = 1 // 当前桶的迭代子
@@ -82,7 +87,7 @@ const (
 	sameSizeGrow = 8 // 当前 map 增长到新 map 相同尺寸
 
 	// 迭代子检查桶ID的哨兵
-	noCheck = 1<<(8*sys.PtrSize) - 1 
+	noCheck = 1<<(8*sys.PtrSize) - 1
 )
 ```
 
@@ -144,18 +149,18 @@ missprobe ：
 ```go
 // A header for a Go map.
 type hmap struct {
-	
+
 	count     int 	 // 键值对数目
 	flags     uint8
 	B         uint8  // 总共能存 6.5 * 2^B 个元素
-	noverflow uint16 
-	hash0     uint32 
+	noverflow uint16
+	hash0     uint32
 
 	buckets    unsafe.Pointer // 桶
 	oldbuckets unsafe.Pointer // 旧桶
 	nevacuate  uintptr        // 下一次待迁移的桶的编号
 
-	extra *mapextra 
+	extra *mapextra
 }
 ```
 
@@ -163,7 +168,7 @@ type hmap struct {
 ```go
 // A header for a Go map.
 type hmap struct {
-	
+
 	count     int 	 // map 的长度 (键值对数目)
 	flags     uint8
 	// B 是 buckets 数组的长度的对数，也就是说 buckets 数组的长度就是 2^B
@@ -191,7 +196,7 @@ type mapextra struct {
 	// However, bmap.overflow is a pointer. In order to keep overflow buckets
 	// alive, we store pointers to all overflow buckets in hmap.extra.overflow and hmap.extra.oldoverflow.
 	// overflow and oldoverflow are only used if key and elem do not contain pointers.
-	
+
 	// overflow contains overflow buckets for hmap.buckets.
 	// oldoverflow contains overflow buckets for hmap.oldbuckets.
 	// The indirection allows to store a pointer to the slice in hiter.
@@ -233,4 +238,3 @@ bmap 就是我们常说的“桶”，桶里面会最多装 8 个 key，这些 k
 
 
 ![hashmap-bmap](images/hashmap-bmap.png)
-
