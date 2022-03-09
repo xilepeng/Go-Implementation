@@ -156,7 +156,7 @@ type hmap struct {
 	noverflow uint16
 	hash0     uint32
 
-	buckets    unsafe.Pointer // 桶
+	buckets    unsafe.Pointer // 桶 array of 2^B Buckets
 	oldbuckets unsafe.Pointer // 旧桶
 	nevacuate  uintptr        // 下一次待迁移的桶的编号
 
