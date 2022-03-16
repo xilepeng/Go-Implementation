@@ -36,8 +36,7 @@ hash table 是计算机数据结构中一个最重要的设计。大部分 hash 
 **Go 语言 map 采用的是哈希查找表，并且使用链表解决哈希冲突。**
 
 代码基于
-go version go1.17.5 darwin/amd64
-
+GOVERSION="go1.17.8"
 
 Go 的 map 实现在 src/runtime/map.go 这个文件中。
 
@@ -46,7 +45,9 @@ map 底层实质还是一个 hash table。
 先来看看 Go 定义了一些常量。
 
 ```shell
-➜  ~ cd /usr/local/Cellar/go/1.17.5/libexec/src
+
+➜  ~ cd /usr/local/Cellar/go/1.17.8/libexec/src
+
 ➜  src code .
 ```
 
@@ -142,7 +143,7 @@ missprobe ：
 渐进式扩容：键值对迁移的时间分摊到多次哈希表操作中的方式，可避免一次性扩容带来的性能瞬时抖动
 
 
-
+选择桶时用的是 ”与“ 运算的方法
 
 **Go 中 map header 的定义：**
 
@@ -158,7 +159,7 @@ type hmap struct {
 
 	buckets    unsafe.Pointer // 桶 array of 2^B Buckets
 	oldbuckets unsafe.Pointer // 旧桶
-	nevacuate  uintptr        // 下一次待迁移的桶的编号
+	nevacuate  uintptr        // 即将迁移的旧桶编号
 
 	extra *mapextra
 }
@@ -238,3 +239,8 @@ bmap 就是我们常说的“桶”，桶里面会最多装 8 个 key，这些 k
 
 
 ![hashmap-bmap](images/hashmap-bmap.png)
+
+
+
+
+
