@@ -22,6 +22,7 @@ B >  15 noverflow >= 2^15
 ```go
 loadFactor := count / (2^B) > 6.5
 ```
+
 count 就是 map 的元素个数，2^B 表示 bucket 数量。
 
 再来说触发 map 扩容的时机：在向 map 插入新 key 的时候，会进行条件检测，符合下面这 2 个条件，就会触发扩容：
