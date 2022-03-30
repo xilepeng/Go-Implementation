@@ -794,7 +794,9 @@ done:
 1. 如果找到要插入的 key ，只需要直接更新对应的 value 值就好了。
 2. 如果没有在 bmap 中没有找到待插入的 key ，这么这时分几种情况。
 情况一: bmap 中还有空位，在遍历 bmap 的时候预先标记空位，一旦查找结束也没有找到 key，就把 key 放到预先遍历时候标记的空位上。
-情况二：bmap中已经没有空位了。这个时候 bmap 装的很满了。此时需要检查一次最大负载因子是否已经达到了。如果达到了，立即进行扩容操作。扩容以后在新桶里面插入 key，流程和上述的一致。如果没有达到最大负载因子，那么就在新生成一个 bmap，并把前一个 bmap 的 overflow 指针指向新的 bmap。
+情况二：bmap中已经没有空位了。这个时候 bmap 装的很满了。此时需要检查一次最大负载因子是否已经达到了。
+如果达到了，立即进行扩容操作。扩容以后在新桶里面插入 key，流程和上述的一致。
+如果没有达到最大负载因子，那么就在新生成一个 bmap，并把前一个 bmap 的 overflow 指针指向新的 bmap。
 3. 在扩容过程中，oldbucke t是被冻结的，查找 key 时会在
 oldbucket 中查找，但不会在 oldbucket 中插入数据。如果在
 oldbucket 是找到了相应的key，做法是将它迁移到新 bmap 后加入 evalucated 标记。
@@ -811,7 +813,9 @@ oldbucket 是找到了相应的key，做法是将它迁移到新 bmap 后加入 
 
 func mapdelete(t *maptype, h *hmap, key unsafe.Pointer) {
 	if raceenabled && h != nil {
+		// 获取 caller 的 程序计数器 program counter
 		callerpc := getcallerpc()
+		// 获取 mapdelete 的程序计数器 program counter
 		pc := abi.FuncPCABIInternal(mapdelete)
 		racewritepc(unsafe.Pointer(h), callerpc, pc)
 		raceReadObjectPC(t.key, key, callerpc, pc)
@@ -828,24 +832,32 @@ func mapdelete(t *maptype, h *hmap, key unsafe.Pointer) {
 		}
 		return
 	}
+	// 如果多线程读写，直接抛出异常
+	// 并发检查 go hashmap 不支持并发访问
 	if h.flags&hashWriting != 0 {
 		throw("concurrent map writes")
 	}
-
+    // 计算 key 值的 hash 值
 	hash := t.hasher(key, uintptr(h.hash0))
 
 	// Set hashWriting after calling t.hasher, since t.hasher may panic,
 	// in which case we have not actually done a write (delete).
+	// 在计算完 hash 值以后立即设置 hashWriting 变量的值，
+	// 如果在计算 hash 值的过程中没有完全写完，可能会导致 panic
 	h.flags ^= hashWriting
 
 	bucket := hash & bucketMask(h.B)
+	// 如果还在扩容中，继续扩容
 	if h.growing() {
 		growWork(t, h, bucket)
 	}
+	// 根据 hash 值的低 B 位找到位于哪个桶
 	b := (*bmap)(add(h.buckets, bucket*uintptr(t.bucketsize)))
 	bOrig := b
+	// 计算 hash 值的高 8 位
 	top := tophash(hash)
 search:
+// 遍历当前桶所有键值，查找 key 对应的 value
 	for ; b != nil; b = b.overflow(t) {
 		for i := uintptr(0); i < bucketCnt; i++ {
 			if b.tophash[i] != top {
@@ -854,6 +866,7 @@ search:
 				}
 				continue
 			}
+			// 如果 k 是指向 key 的指针，那么这里需要取出 key 的值
 			k := add(unsafe.Pointer(b), dataOffset+i*uintptr(t.keysize))
 			k2 := k
 			if t.indirectkey() {
@@ -864,18 +877,23 @@ search:
 			}
 			// Only clear key if there are pointers in it.
 			if t.indirectkey() {
+				// key 的指针置空
 				*(*unsafe.Pointer)(k) = nil
 			} else if t.key.ptrdata != 0 {
+				// 清除 key 的内存
 				memclrHasPointers(k, t.key.size)
 			}
 			e := add(unsafe.Pointer(b), dataOffset+bucketCnt*uintptr(t.keysize)+i*uintptr(t.elemsize))
 			if t.indirectelem() {
+				// value 的指针置空
 				*(*unsafe.Pointer)(e) = nil
 			} else if t.elem.ptrdata != 0 {
+				// 清除 value 的内存
 				memclrHasPointers(e, t.elem.size)
 			} else {
 				memclrNoHeapPointers(e, t.elem.size)
 			}
+			// 清空 tophash 里面的值
 			b.tophash[i] = emptyOne
 			// If the bucket now ends in a bunch of emptyOne states,
 			// change those to emptyRest states.
@@ -909,6 +927,7 @@ search:
 				}
 			}
 		notLast:
+		    // map 里面 key 的总个数减1
 			h.count--
 			// Reset the hash seed to make it more difficult for attackers to
 			// repeatedly trigger hash collisions. See issue 25237.
@@ -927,6 +946,11 @@ search:
 
 ```
 
+删除操作主要流程和查找 key 流程也差不多，找到对应的 key 以后，如果是指针指向原来的 key，就把指针置为 nil。如果是值就清空它所在的内存。还要清理 tophash 里面的值最后把 map 的 key 总个数计数器减1 。
+
+如果在扩容过程中，删除操作会在扩容以后在新的 bmap 里面删除。
+
+查找的过程依旧会一直遍历到链表的最后一个 bmap 桶。
 
 
 

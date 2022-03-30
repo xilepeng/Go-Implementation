@@ -27,7 +27,7 @@
 |  ✅ [Channel](channel.md)       |                    |              |
 |  ✅ [Slice](slice.md)           |                    |              |
 |  ✅ [Map](Map.md)               |  2022.3.28         | 2022.3.31    |
-|  😂[String](String.md)          |  2022.4.1          |   2022.4.1   |
+|  😂[String](String.md)          |  2022.4.1          | 2022.4.1     |
 |  [Interface](Interface.md)      |                    |              |
 |  [Reflection](reflection.md)    |                    |              |
 
