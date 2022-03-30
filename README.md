@@ -1,37 +1,56 @@
-**Go语言设计与实现**
 
 
 
+## 哇塞计划 
 
 
-| 时间                | 哇塞计划               | 完成        |
+| 预留时间             | 哇塞计划                 | 完成          |
 | :---------------   | :--------------         | :------------ |
 | **5:00 ~ 7:00**    | **学习2小时**            | ✅            |
-| **8:00 ~ 12:00**   | **学习3小时**            | ✅            |
+| **8:00 ~ 12:00**   | **学习4小时**            | ✅            |
 | **14:00 ~ 18:00**  | **学习4小时**            | ✅            |
 | **19:00 ~ 20:00**  | **跑5公里 + 200个俯卧撑** | ✅            |
-| **21:30 ~ 05:00**  | **睡7小时😴😴💤💤**       | ✅            |
+| **21:30 ~ 05:00**  | **睡7小时**              | ✅            |
 
-## 2022-01-01 ~ 2022-04-05 完成
 
-1. ✅ [Goroutine](Goroutine.md)
-1. ✅ [Channel](channel.md)
-1. ✅ [Slice](slice.md)
-1. ✅ [Map](Map.md)  
-1. [String](String.md)
-1. [for and range]()
-1. [select]()
-1. [defer]()
-1. [panic and recover ]()
-1. [make and new]()  
-1. [Interface](Interface.md)
-1. [Reflection](reflection.md)
-1. [Gc](gc.md)  
-1. [Build and Link](build.md)
-1. [defer 和逃逸分析]()
-1. [Lib](lib.md)
-1. [内存对齐]()
-1. ✅ [ASM](asm.md)  
+
+## Go语言设计与实现
+
+2022-01-01 ~ 2022-04-05 完成
+
+
+
+
+|  哇塞计划                        |  开始时间            | 完成时间       |
+|  :---------------               | :--------------    | :------------ |
+|  ✅ [Goroutine](Goroutine.md)   |                    |              |
+|  ✅ [Channel](channel.md)       |                    |              |
+|  ✅ [Slice](slice.md)           |                    |              |
+|  ✅ [Map](Map.md)               |  2022.3.28         | 2022.3.31    |
+|  😂[String](String.md)          |  2022.4.1          |   2022.4.1   |
+|  [Interface](Interface.md)      |                    |              |
+|  [Reflection](reflection.md)    |                    |              |
+
+
+
+<!-- 1. ✅ [Goroutine](Goroutine.md)
+2. ✅ [Channel](channel.md)
+3. ✅ [Slice](slice.md)
+4. ✅ [Map](Map.md)  
+5. [String](String.md)
+6. [for and range]()
+7. [select]()
+8. [defer]()
+9. [panic and recover ]()
+10. [make and new]()  
+11. [Interface](Interface.md)
+12. [Reflection](reflection.md)
+13. [Gc](gc.md)  
+14. [Build and Link](build.md)
+15. [defer 和逃逸分析]()
+16. [Lib](lib.md)
+17. [内存对齐]()
+18. ✅ [ASM](asm.md)   -->
 
 
 
@@ -53,8 +72,8 @@
 **3. 不惜任何代价维护预留时间。 只有当自己下决心说“我要专注于最重要的那件事，其他任何事、任何人都不能让我分心”这句话时，预留时间才能起作用。**
 **不幸的是，他人不会明白我们的决心，所以你必须想尽办法应对这种情况。你的预留时间是自己每天最重要的约会，因此无论如何都要不惜代价维护它。**
 
-成大事者不是在拉长工作时间，而是在有限的时间内做得更多。
+**成大事者不是在拉长工作时间，而是在有限的时间内做得更多。**
 
-你必须明白，预留时间很重要，有效地预留时间也很重要。
+**你必须明白，预留时间很重要，有效地预留时间也很重要。**
 
 摘录来自: （美）凯勒. “最重要的事，只有一件。” Apple Books.
