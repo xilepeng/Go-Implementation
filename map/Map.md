@@ -1,7 +1,8 @@
 1. [map 的底层如何实现](#map-的底层如何实现)
 2. [1.新建 Map](#1新建-map)
-3. [哈希函数](#哈希函数)
-4. [2. 查找 Key](#2-查找-key)
+3. [2. 查找 Key](#2-查找-key)
+4. [3. 插入 Key](#3-插入-key)
+5. [4. 删除 Key](#4-删除-key)
 
 
 
@@ -440,8 +441,7 @@ func makeBucketArray(t *maptype, b uint8, dirtyalloc unsafe.Pointer) (buckets un
 
 
 
-
-## 哈希函数
+**哈希函数**
 
 map 的一个关键点在于，哈希函数的选择。在程序启动时，会检测 cpu 是否支持 aes，如果支持，则使用 aes hash，否则使用 memhash。这是在函数 alginit() 中完成，位于路径：src/runtime/alg.go 下。
 
@@ -641,6 +641,319 @@ tophash 的引入是为了加速查找的。由于它只存了 hash 值的高8�
 
 
 如果在 bucket 中没找到，并且 overflow 不为空，还要继续去 overflow bucket 中寻找，直到找到或是所有的 key 槽位都找遍了，包括所有的 overflow bucket。
+
+
+## 3. 插入 Key
+
+插入 key 的过程和查找 key 的过程大体一致。
+
+```go
+
+// Like mapaccess, but allocates a slot for the key if it is not present in the map.
+func mapassign(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
+	if h == nil {
+		panic(plainError("assignment to entry in nil map"))
+	}
+	if raceenabled {
+		callerpc := getcallerpc()
+		pc := abi.FuncPCABIInternal(mapassign)
+		racewritepc(unsafe.Pointer(h), callerpc, pc)
+		raceReadObjectPC(t.key, key, callerpc, pc)
+	}
+	if msanenabled {
+		msanread(key, t.key.size)
+	}
+	if asanenabled {
+		asanread(key, t.key.size)
+	}
+	if h.flags&hashWriting != 0 {
+		throw("concurrent map writes")
+	}
+	hash := t.hasher(key, uintptr(h.hash0))
+
+	// Set hashWriting after calling t.hasher, since t.hasher may panic,
+	// in which case we have not actually done a write.
+	// 在计算完 hash 值以后立即设置 hashWriting 变量的值，如果在计算 hash 值的过程中没有完全写完，可能会导致 panic
+	h.flags ^= hashWriting
+	// 如果 hmap 的桶的个数为0，那么就新建一个桶
+	if h.buckets == nil {
+		h.buckets = newobject(t.bucket) // newarray(t.bucket, 1)
+	}
+
+again:
+	// hash 值对 B 取余，求得所在哪个桶
+	bucket := hash & bucketMask(h.B)
+	// 如果还在扩容中，继续扩容
+	if h.growing() {
+		growWork(t, h, bucket)
+	}
+	// 根据 hash 值的低 B 位找到位于哪个桶
+	b := (*bmap)(add(h.buckets, bucket*uintptr(t.bucketsize)))
+	// 计算 hash 值的高 8 位
+	top := tophash(hash)
+
+	var inserti *uint8
+	var insertk unsafe.Pointer
+	var elem unsafe.Pointer
+bucketloop:
+	for {
+		// 遍历当前桶所有键值，查找 key 对应的 value
+		for i := uintptr(0); i < bucketCnt; i++ {
+			if b.tophash[i] != top {
+				if isEmpty(b.tophash[i]) && inserti == nil {
+					// 如果往后找都没有找到，这里先记录一个标记，方便找不到以后插入到这里
+					inserti = &b.tophash[i]
+					// 计算出偏移 i 个 key 值的位置
+					insertk = add(unsafe.Pointer(b), dataOffset+i*uintptr(t.keysize))
+					// 计算出 val 所在的位置，当前桶的首地址 + 8个 key 值所占的大小 + i 个 value 值所占的大小
+					elem = add(unsafe.Pointer(b), dataOffset+bucketCnt*uintptr(t.keysize)+i*uintptr(t.elemsize))
+				}
+				if b.tophash[i] == emptyRest {
+					break bucketloop
+				}
+				continue
+			}
+			// 依次取出 key 值
+			k := add(unsafe.Pointer(b), dataOffset+i*uintptr(t.keysize))
+			// 如果 key 值是一个指针，那么就取出改指针对应的 key 值
+			if t.indirectkey() {
+				k = *((*unsafe.Pointer)(k))
+			}
+			// 比较 key 值是否相等
+			if !t.key.equal(key, k) {
+				continue
+			}
+			// already have a mapping for key. Update it.
+			// 如果需要更新，那么就把 t.key 拷贝从 k 拷贝到 key
+			if t.needkeyupdate() {
+				typedmemmove(t.key, k, key)
+			}
+			// 计算出 val 所在的位置，当前桶的首地址 + 8个 key 值所占的大小 + i 个 value 值所占的大小
+			elem = add(unsafe.Pointer(b), dataOffset+bucketCnt*uintptr(t.keysize)+i*uintptr(t.elemsize))
+			goto done
+		}
+		ovf := b.overflow(t)
+		if ovf == nil {
+			break
+		}
+		b = ovf
+	}
+
+	// Did not find mapping for key. Allocate new cell & add entry.
+
+	// If we hit the max load factor or we have too many overflow buckets,
+	// and we're not already in the middle of growing, start growing.
+	// 没有找到当前的 key 值，并且检查最大负载因子，如果达到了最大负载因子，或者存在很多溢出的桶
+	if !h.growing() && (overLoadFactor(h.count+1, h.B) || tooManyOverflowBuckets(h.noverflow, h.B)) {
+		// 开始扩容
+		hashGrow(t, h)
+		goto again // Growing the table invalidates everything, so try again
+	}
+    // 如果找不到一个空的位置可以插入 key 值
+	if inserti == nil {
+		// The current bucket and all the overflow buckets connected to it are full, allocate a new one.
+		// 意味着当前桶已经全部满了，那么就生成一个新的
+		newb := h.newoverflow(t, b)
+		inserti = &newb.tophash[0]
+		insertk = add(unsafe.Pointer(newb), dataOffset)
+		elem = add(insertk, bucketCnt*uintptr(t.keysize))
+	}
+
+	// store new key/elem at insert position
+	if t.indirectkey() {
+		// 如果是存储 key 值的指针，这里就用 insertk 存储 key 值的地址
+		kmem := newobject(t.key)
+		*(*unsafe.Pointer)(insertk) = kmem
+		insertk = kmem
+	}
+	if t.indirectelem() {
+		vmem := newobject(t.elem)
+		*(*unsafe.Pointer)(elem) = vmem
+	}
+	// 将 t.key 从 insertk 拷贝到 key 的位置
+	typedmemmove(t.key, insertk, key)
+	*inserti = top
+	// hmap 中保存的总 key 值的数量 + 1
+	h.count++
+
+done:
+	// 禁止并发写
+	if h.flags&hashWriting == 0 {
+		throw("concurrent map writes")
+	}
+	h.flags &^= hashWriting
+	if t.indirectelem() {
+		// 如果 value 里面存储的是指针，那么取值该指针指向的 value 值
+		elem = *((*unsafe.Pointer)(elem))
+	}
+	return elem
+}
+```
+插入 key 的过程中和查找 key 有几点不同，需要注意：
+
+1. 如果找到要插入的 key ，只需要直接更新对应的 value 值就好了。
+2. 如果没有在 bmap 中没有找到待插入的 key ，这么这时分几种情况。
+情况一: bmap 中还有空位，在遍历 bmap 的时候预先标记空位，一旦查找结束也没有找到 key，就把 key 放到预先遍历时候标记的空位上。
+情况二：bmap中已经没有空位了。这个时候 bmap 装的很满了。此时需要检查一次最大负载因子是否已经达到了。如果达到了，立即进行扩容操作。扩容以后在新桶里面插入 key，流程和上述的一致。如果没有达到最大负载因子，那么就在新生成一个 bmap，并把前一个 bmap 的 overflow 指针指向新的 bmap。
+3. 在扩容过程中，oldbucke t是被冻结的，查找 key 时会在
+oldbucket 中查找，但不会在 oldbucket 中插入数据。如果在
+oldbucket 是找到了相应的key，做法是将它迁移到新 bmap 后加入 evalucated 标记。
+
+其他流程和查找 key 基本一致，这里就不再赘述了。
+
+
+
+
+## 4. 删除 Key
+
+
+```go
+
+func mapdelete(t *maptype, h *hmap, key unsafe.Pointer) {
+	if raceenabled && h != nil {
+		callerpc := getcallerpc()
+		pc := abi.FuncPCABIInternal(mapdelete)
+		racewritepc(unsafe.Pointer(h), callerpc, pc)
+		raceReadObjectPC(t.key, key, callerpc, pc)
+	}
+	if msanenabled && h != nil {
+		msanread(key, t.key.size)
+	}
+	if asanenabled && h != nil {
+		asanread(key, t.key.size)
+	}
+	if h == nil || h.count == 0 {
+		if t.hashMightPanic() {
+			t.hasher(key, 0) // see issue 23734
+		}
+		return
+	}
+	if h.flags&hashWriting != 0 {
+		throw("concurrent map writes")
+	}
+
+	hash := t.hasher(key, uintptr(h.hash0))
+
+	// Set hashWriting after calling t.hasher, since t.hasher may panic,
+	// in which case we have not actually done a write (delete).
+	h.flags ^= hashWriting
+
+	bucket := hash & bucketMask(h.B)
+	if h.growing() {
+		growWork(t, h, bucket)
+	}
+	b := (*bmap)(add(h.buckets, bucket*uintptr(t.bucketsize)))
+	bOrig := b
+	top := tophash(hash)
+search:
+	for ; b != nil; b = b.overflow(t) {
+		for i := uintptr(0); i < bucketCnt; i++ {
+			if b.tophash[i] != top {
+				if b.tophash[i] == emptyRest {
+					break search
+				}
+				continue
+			}
+			k := add(unsafe.Pointer(b), dataOffset+i*uintptr(t.keysize))
+			k2 := k
+			if t.indirectkey() {
+				k2 = *((*unsafe.Pointer)(k2))
+			}
+			if !t.key.equal(key, k2) {
+				continue
+			}
+			// Only clear key if there are pointers in it.
+			if t.indirectkey() {
+				*(*unsafe.Pointer)(k) = nil
+			} else if t.key.ptrdata != 0 {
+				memclrHasPointers(k, t.key.size)
+			}
+			e := add(unsafe.Pointer(b), dataOffset+bucketCnt*uintptr(t.keysize)+i*uintptr(t.elemsize))
+			if t.indirectelem() {
+				*(*unsafe.Pointer)(e) = nil
+			} else if t.elem.ptrdata != 0 {
+				memclrHasPointers(e, t.elem.size)
+			} else {
+				memclrNoHeapPointers(e, t.elem.size)
+			}
+			b.tophash[i] = emptyOne
+			// If the bucket now ends in a bunch of emptyOne states,
+			// change those to emptyRest states.
+			// It would be nice to make this a separate function, but
+			// for loops are not currently inlineable.
+			if i == bucketCnt-1 {
+				if b.overflow(t) != nil && b.overflow(t).tophash[0] != emptyRest {
+					goto notLast
+				}
+			} else {
+				if b.tophash[i+1] != emptyRest {
+					goto notLast
+				}
+			}
+			for {
+				b.tophash[i] = emptyRest
+				if i == 0 {
+					if b == bOrig {
+						break // beginning of initial bucket, we're done.
+					}
+					// Find previous bucket, continue at its last entry.
+					c := b
+					for b = bOrig; b.overflow(t) != c; b = b.overflow(t) {
+					}
+					i = bucketCnt - 1
+				} else {
+					i--
+				}
+				if b.tophash[i] != emptyOne {
+					break
+				}
+			}
+		notLast:
+			h.count--
+			// Reset the hash seed to make it more difficult for attackers to
+			// repeatedly trigger hash collisions. See issue 25237.
+			if h.count == 0 {
+				h.hash0 = fastrand()
+			}
+			break search
+		}
+	}
+
+	if h.flags&hashWriting == 0 {
+		throw("concurrent map writes")
+	}
+	h.flags &^= hashWriting
+}
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
