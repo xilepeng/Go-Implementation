@@ -1,8 +1,8 @@
 1. [map 的底层如何实现](#map-的底层如何实现)
-2. [1.新建 Map](#1新建-map)
-3. [2. 查找 Key](#2-查找-key)
-4. [3. 插入 Key](#3-插入-key)
-5. [4. 删除 Key](#4-删除-key)
+2. [新建 Map](#新建-map)
+3. [查找 Key](#查找-key)
+4. [插入 Key](#插入-key)
+5. [删除 Key](#删除-key)
 
 
 
@@ -291,7 +291,7 @@ type mapextra struct {
 
 
 
-## 1.新建 Map
+## 新建 Map
 
 
 ```go
@@ -461,7 +461,7 @@ hash 函数，有加密型和非加密型。
 
 
 
-## 2. 查找 Key
+## 查找 Key
 
 
 ```go
@@ -643,7 +643,7 @@ tophash 的引入是为了加速查找的。由于它只存了 hash 值的高8�
 如果在 bucket 中没找到，并且 overflow 不为空，还要继续去 overflow bucket 中寻找，直到找到或是所有的 key 槽位都找遍了，包括所有的 overflow bucket。
 
 
-## 3. 插入 Key
+## 插入 Key
 
 插入 key 的过程和查找 key 的过程大体一致。
 
@@ -804,7 +804,7 @@ oldbucket 是找到了相应的key，做法是将它迁移到新 bmap 后加入 
 
 
 
-## 4. 删除 Key
+## 删除 Key
 
 
 ```go
