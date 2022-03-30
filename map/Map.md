@@ -461,10 +461,48 @@ hash 函数，有加密型和非加密型。
 
 
 
-
 ## 2. 查找 Key
 
+
+```go
+
+
+
+// bucketShift returns 1<<b, optimized for code generation.
+func bucketShift(b uint8) uintptr {
+	// Masking the shift amount allows overflow checks to be elided.
+	return uintptr(1) << (b & (goarch.PtrSize*8 - 1))
+}
+
+// bucketMask returns 1<<b - 1, optimized for code generation.
+func bucketMask(b uint8) uintptr {
+	return bucketShift(b) - 1
+}
+// hash & (1<<B - 1) 求出 key 在哪个桶
+// hash & m 求出 key 在哪个桶
+
+
+    // 比如 B=5，那 m 就是 2^5=31，二进制是全 1
+    // 求 bucket 索引时，将 hash 与 m 相与，
+    // 达到 bucket 位置下标由 hash 的低 8 位决定的效果
+
+
+// tophash calculates the tophash value for hash.
+func tophash(hash uintptr) uint8 {
+	top := uint8(hash >> (goarch.PtrSize*8 - 8))
+	// 如果 top 小于 minTopHash，就让它加上 minTopHash 的偏移。
+	// 因为 0 - minTopHash 这区间的数都已经用来作为标记位了
+	if top < minTopHash {
+		top += minTopHash
+	}
+	return top
+}
+```
+
+
 在 Go 中，如果字典里面查找一个不存在的 key ，查找不到并不会返回一个 nil ，而是返回当前类型的零值。比如，字符串就返回空字符串，int 类型就返回 0 。
+
+
 
 ```go
 
@@ -475,6 +513,7 @@ hash 函数，有加密型和非加密型。
 // hold onto it for very long.
 func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
 	if raceenabled && h != nil {
+		// 获取 caller 的 程序计数器 program counter
 		callerpc := getcallerpc()
 		pc := abi.FuncPCABIInternal(mapaccess1)
 		racereadpc(unsafe.Pointer(h), callerpc, pc)
@@ -486,43 +525,66 @@ func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
 	if asanenabled && h != nil {
 		asanread(key, t.key.size)
 	}
+	// 如果 h 什么都没有，返回零值
 	if h == nil || h.count == 0 {
 		if t.hashMightPanic() {
 			t.hasher(key, 0) // see issue 23734
 		}
 		return unsafe.Pointer(&zeroVal[0])
 	}
+	// 如果多线程读写，直接抛出异常
+	// 并发检查 go hashmap 不支持并发访问
 	if h.flags&hashWriting != 0 {
 		throw("concurrent map read and map write")
 	}
+	// 不同类型 key 使用的 hash 算法在编译期确定
+	// 计算 key 的 hash 值, 加入 hash0 引入随机性
 	hash := t.hasher(key, uintptr(h.hash0))
 	m := bucketMask(h.B)
+	// hash & (1<<B - 1) 求出 key 在哪个桶
+	// hash & m 求出 key 在哪个桶
+	// b 就是 bucket 的地址
 	b := (*bmap)(add(h.buckets, (hash&m)*uintptr(t.bucketsize)))
+	// oldbuckets 不为 nil，说明发生了扩容
 	if c := h.oldbuckets; c != nil {
+		// 如果不是等量扩容
 		if !h.sameSizeGrow() {
 			// There used to be half as many buckets; mask down one more power of two.
+			// 如果 oldbuckets 未迁移完成 则找找 oldbuckets 中对应的 bucket(低 B-1 位)
+			// 否则为 buckets 中的 bucket(低 B 位)
+			// 把 mask 缩小 1 倍
 			m >>= 1
 		}
+		// 求出 key 在老的 map 中的 bucket 位置
 		oldb := (*bmap)(add(c, (hash&m)*uintptr(t.bucketsize)))
 		if !evacuated(oldb) {
+			// 如果 oldbuckets 桶存在，并且还没有扩容迁移，就在老的桶里面查找 key
 			b = oldb
 		}
 	}
+	// 取出 hash 值的高 8 位	
 	top := tophash(hash)
 bucketloop:
 	for ; b != nil; b = b.overflow(t) {
 		for i := uintptr(0); i < bucketCnt; i++ {
+			// 如果 hash 的高8位和当前 key 记录的不一样，就找下一个
+			// 这样比较很高效，因为只用比较高8位，不用比较所有的 hash 值
+			// 如果高8位都不相同，hash 值肯定不同，但是高8位如果相同，那么就要比较整个 hash 值了
 			if b.tophash[i] != top {
 				if b.tophash[i] == emptyRest {
 					break bucketloop
 				}
 				continue
 			}
+			// 取出 key 值的方式是用偏移量，bmap 首地址 + i 个 key 值大小的偏移量
 			k := add(unsafe.Pointer(b), dataOffset+i*uintptr(t.keysize))
+			// 比较 key 值是否相等
 			if t.indirectkey() {
 				k = *((*unsafe.Pointer)(k))
 			}
 			if t.key.equal(key, k) {
+				// 如果找到了 key，那么取出 value 值
+				// 取出 value 值的方式是用偏移量，bmap 首地址 + 8 个 key 值大小的偏移量 + i 个 value 值大小的偏移量
 				e := add(unsafe.Pointer(b), dataOffset+bucketCnt*uintptr(t.keysize)+i*uintptr(t.elemsize))
 				if t.indirectelem() {
 					e = *((*unsafe.Pointer)(e))
@@ -564,11 +626,21 @@ tophash 的引入是为了加速查找的。由于它只存了 hash 值的高8�
 如果找到了 key 就返回对应的 value。如果没有找到，还会继续去 overflow 桶继续寻找，直到找到最后一个桶，如果还没有找到就返回对应类型的零值。
 
 
+
+
+
 图片引用[码农桃花源](https://qcrao91.gitbook.io/go/map/map-de-di-ceng-shi-xian-yuan-li-shi-shi-mo)
 ![](images/select_key2.png)
 
 
+上图中，假定 B = 5，所以 bucket 总数就是 2^5 = 32。
 
+1. 首先计算出待查找 key 的哈希，
+2. 使用低 5 位 00110，找到对应的 6 号 bucket，
+3. 使用高 8 位 10010111，对应十进制 151，在 6 号 bucket 中寻找 tophash 值（HOB hash）为 151 的 key，找到了 2 号槽位，这样整个查找过程就结束了。
+
+
+如果在 bucket 中没找到，并且 overflow 不为空，还要继续去 overflow bucket 中寻找，直到找到或是所有的 key 槽位都找遍了，包括所有的 overflow bucket。
 
 
 
@@ -580,3 +652,7 @@ tophash 的引入是为了加速查找的。由于它只存了 hash 值的高8�
 参考博客：
 [一缕殇流化隐半边冰霜](https://halfrost.com/go_map_chapter_one/)
 [码农桃花源](https://qcrao91.gitbook.io/go/map/map-de-di-ceng-shi-xian-yuan-li-shi-shi-mo)
+
+
+
+
