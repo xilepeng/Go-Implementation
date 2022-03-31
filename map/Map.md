@@ -3,6 +3,8 @@
 3. [查找 Key](#查找-key)
 4. [插入 Key](#插入-key)
 5. [删除 Key](#删除-key)
+6. [增量翻倍扩容](#增量翻倍扩容)
+7. [Map 实现中的一些优化](#map-实现中的一些优化)
 
 
 
@@ -562,7 +564,7 @@ func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
 			b = oldb
 		}
 	}
-	// 取出 hash 值的高 8 位	
+	// 取出 hash 值的高 8 位
 	top := tophash(hash)
 bucketloop:
 	for ; b != nil; b = b.overflow(t) {
@@ -954,7 +956,291 @@ search:
 
 
 
+## 增量翻倍扩容
 
+这部分算是整个 Map 实现比较核心的部分了。我们都知道 Map 在不断的装载 Key 值的时候，查找效率会变的越来越低，如果此时不进行扩容操作的话，哈希冲突使得链表变得越来越长，性能也就越来越差。扩容势在必行。
+
+但是扩容过程中如果阻断了 Key 值的写入，在处理大数据的时候会导致有一段不响应的时间，如果用在高实时的系统中，那么每次扩容都会卡几秒，这段时间都不能相应任何请求。这种性能明显是不能接受的。所以要既不影响写入，也同时要进行扩容。这个时候就应该增量扩容了。
+
+这里增量扩容其实用途已经很广泛了，之前举例的 Redis 就采用的增量扩容策略。
+
+接下来看看 Go 是怎么进行增量扩容的。
+
+在 Go 的 mapassign 插入 Key 值、mapdelete 删除 key 值的时候都会检查当前是否在扩容中。
+
+```go
+func growWork(t *maptype, h *hmap, bucket uintptr) {
+	// make sure we evacuate the oldbucket corresponding
+	// to the bucket we're about to use
+	// 确保我们迁移了所有 oldbucket
+	evacuate(t, h, bucket&h.oldbucketmask())
+
+	// evacuate one more oldbucket to make progress on growing
+	// 再迁移一个标记过的桶
+	if h.growing() {
+		evacuate(t, h, h.nevacuate)
+	}
+}
+```
+从这里我们可以看到，每次执行一次 growWork 会迁移2个桶。一个是当前的桶，这算是局部迁移，另外一个是 hmap 里面指向的 nevacuate 的桶，这算是增量迁移。
+
+在插入 Key 值的时候，如果当前在扩容过程中，oldbucket 是被冻结的，查找时会先在 oldbucket 中查找，但不会在oldbucket中插入数据。只有在 oldbucket 找到了相应的 key，那么将它迁移到新 bucket 后加入 evalucated 标记。
+
+在删除 Key 值的时候，如果当前在扩容过程中，优先查找 bucket，即新桶，找到一个以后把它对应的 Key、Value 都置空。如果 bucket 里面找不到，才会去 oldbucket 中去查找。
+
+每次插入 Key 值的时候，都会判断一下当前装载因子是否超过了 6.5，如果达到了这个极限，就立即执行扩容操作 hashGrow。这是扩容之前的准备工作。
+
+```go
+
+func hashGrow(t *maptype, h *hmap) {
+	// If we've hit the load factor, get bigger.
+	// Otherwise, there are too many overflow buckets,
+	// so keep the same number of buckets and "grow" laterally.
+	// 如果达到了最大装载因子，就需要扩容。
+	// 不然的话，一个桶后面链表跟着一大堆的 overflow 桶
+	bigger := uint8(1)
+	if !overLoadFactor(h.count+1, h.B) {
+		bigger = 0
+		h.flags |= sameSizeGrow
+	}
+	// 把 hmap 的旧桶的指针指向当前桶
+	oldbuckets := h.buckets
+	// 生成新的扩容以后的桶，hmap 的 buckets 指针指向扩容以后的桶。
+	newbuckets, nextOverflow := makeBucketArray(t, h.B+bigger, nil)
+
+	flags := h.flags &^ (iterator | oldIterator)
+	if h.flags&iterator != 0 {
+		flags |= oldIterator
+	}
+	// commit the grow (atomic wrt gc)
+	// B 加上新的值
+	h.B += bigger
+	h.flags = flags
+	// 旧桶指针指向当前桶
+	h.oldbuckets = oldbuckets
+	// 新桶指针指向扩容以后的桶
+	h.buckets = newbuckets
+	h.nevacuate = 0
+	h.noverflow = 0
+
+	if h.extra != nil && h.extra.overflow != nil {
+		// Promote current overflow buckets to the old generation.
+		if h.extra.oldoverflow != nil {
+			throw("oldoverflow is not nil")
+		}
+		// 交换 overflow[0] 和 overflow[1] 的指向
+		h.extra.oldoverflow = h.extra.overflow
+		h.extra.overflow = nil
+	}
+	if nextOverflow != nil {
+		if h.extra == nil {
+			// 生成 mapextra
+			h.extra = new(mapextra)
+		}
+		h.extra.nextOverflow = nextOverflow
+	}
+
+	// 实际拷贝键值对的过程在 evacuate() 中
+	// the actual copying of the hash table data is done incrementally
+	// by growWork() and evacuate().
+}
+```
+
+
+
+hashGrow 操作算是扩容之前的准备工作，实际拷贝的过程在 evacuate 中。
+
+hashGrow 操作会先生成扩容以后的新的桶数组。新的桶数组的大小是之前的2倍。然后 hmap 的 buckets 会指向这个新的扩容以后的桶，而 oldbuckets 会指向当前的桶数组。
+
+处理完 hmap 以后，再处理 mapextra，nextOverflow 的指向原来的 overflow 指针，overflow 指针置为 null。
+
+到此就做好扩容之前的准备工作了。
+
+```go
+
+func evacuate(t *maptype, h *hmap, oldbucket uintptr) {
+	b := (*bmap)(add(h.oldbuckets, oldbucket*uintptr(t.bucketsize)))
+	// 在准备扩容之前桶的个数
+	newbit := h.noldbuckets()
+	if !evacuated(b) {
+		// TODO: reuse overflow buckets instead of using new ones, if there
+		// is no iterator using the old buckets.  (If !oldIterator.)
+
+		// xy contains the x and y (low and high) evacuation destinations.
+		var xy [2]evacDst
+		// 新桶中低位的一些桶
+		x := &xy[0] 
+		// key 和 value 值的索引值分别为 x.b
+		x.b = (*bmap)(add(h.buckets, oldbucket*uintptr(t.bucketsize)))
+		// 扩容以后的新桶中低位的第一个 key 值
+		x.k = add(unsafe.Pointer(x.b), dataOffset)
+		// 扩容以后的新桶中低位的第一个 key 值对应的 value 值
+		x.e = add(x.k, bucketCnt*uintptr(t.keysize))
+		// 如果不是等量扩容
+		if !h.sameSizeGrow() {
+			// Only calculate y pointers if we're growing bigger.
+			// Otherwise GC can see bad pointers.
+			y := &xy[1]
+			y.b = (*bmap)(add(h.buckets, (oldbucket+newbit)*uintptr(t.bucketsize)))
+			y.k = add(unsafe.Pointer(y.b), dataOffset)
+			y.e = add(y.k, bucketCnt*uintptr(t.keysize))
+		}
+		// 依次遍历溢出桶
+		for ; b != nil; b = b.overflow(t) {
+			k := add(unsafe.Pointer(b), dataOffset)
+			e := add(k, bucketCnt*uintptr(t.keysize))
+			// 遍历 key - value 键值对
+			for i := 0; i < bucketCnt; i, k, e = i+1, add(k, uintptr(t.keysize)), add(e, uintptr(t.elemsize)) {
+				top := b.tophash[i]
+				if isEmpty(top) {
+					b.tophash[i] = evacuatedEmpty
+					continue
+				}
+				if top < minTopHash {
+					throw("bad map state")
+				}
+				k2 := k
+				// key 值如果是指针，则取出指针里面的值
+				if t.indirectkey() {
+					k2 = *((*unsafe.Pointer)(k2))
+				}
+				var useY uint8
+				if !h.sameSizeGrow() {
+					// 如果不是等量扩容，则需要重新计算 hash 值，不管是高位桶 x 中，还是低位桶 y 中
+					// Compute hash to make our evacuation decision (whether we need
+					// to send this key/elem to bucket x or bucket y).
+					hash := t.hasher(k2, uintptr(h.hash0))
+					if h.flags&iterator != 0 && !t.reflexivekey() && !t.key.equal(k2, k2) {
+						// If key != key (NaNs), then the hash could be (and probably
+						// will be) entirely different from the old hash. Moreover,
+						// it isn't reproducible. Reproducibility is required in the
+						// presence of iterators, as our evacuation decision must
+						// match whatever decision the iterator made.
+						// Fortunately, we have the freedom to send these keys either
+						// way. Also, tophash is meaningless for these kinds of keys.
+						// We let the low bit of tophash drive the evacuation decision.
+						// We recompute a new random tophash for the next level so
+						// these keys will get evenly distributed across all buckets
+						// after multiple grows.
+
+						// 如果两个 key 不相等，那么他们俩极大可能旧的 hash 值也不相等。
+						// tophash 对要迁移的 key 值也是没有多大意义的，所以我们用低位的 tophash 辅助扩容，标记一些状态。
+						// 为下一个级 level 重新计算一些新的随机的 hash 值。以至于这些 key 值在多次扩容以后依旧可以均匀分布在所有桶中
+						// 判断 top 的最低位是否为1
+						useY = top & 1
+						top = tophash(hash)
+					} else {
+						if hash&newbit != 0 {
+							useY = 1
+						}
+					}
+				}
+
+				if evacuatedX+1 != evacuatedY || evacuatedX^1 != evacuatedY {
+					throw("bad evacuatedN")
+				}
+				// 标记低位桶存在 tophash 中
+				b.tophash[i] = evacuatedX + useY // evacuatedX + 1 == evacuatedY
+				dst := &xy[useY]                 // evacuation destination
+				// 如果 key 的索引值到了桶最后一个，就新建一个 overflow
+				if dst.i == bucketCnt {
+					dst.b = h.newoverflow(t, dst.b)
+					dst.i = 0
+					dst.k = add(unsafe.Pointer(dst.b), dataOffset)
+					dst.e = add(dst.k, bucketCnt*uintptr(t.keysize))
+				}
+				// 把 hash 的高8位再次存在 tophash 中
+				dst.b.tophash[dst.i&(bucketCnt-1)] = top // mask dst.i as an optimization, to avoid a bounds check
+				if t.indirectkey() {
+					// 如果是指针指向 key ，那么拷贝指针指向
+					*(*unsafe.Pointer)(dst.k) = k2 // copy pointer
+				} else {
+					// 如果是指针指向 key ，那么进行值拷贝
+					typedmemmove(t.key, dst.k, k) // copy elem
+				}
+				// 同理拷贝 value
+				if t.indirectelem() {
+					*(*unsafe.Pointer)(dst.e) = *(*unsafe.Pointer)(e)
+				} else {
+					typedmemmove(t.elem, dst.e, e)
+				}
+				// 继续迁移下一个
+				dst.i++
+				// These updates might push these pointers past the end of the
+				// key or elem arrays.  That's ok, as we have the overflow pointer
+				// at the end of the bucket to protect against pointing past the
+				// end of the bucket.
+				dst.k = add(dst.k, uintptr(t.keysize))
+				dst.e = add(dst.e, uintptr(t.elemsize))
+			}
+		}
+		// Unlink the overflow buckets & clear key/elem to help GC.
+		if h.flags&oldIterator == 0 && t.bucket.ptrdata != 0 {
+			b := add(h.oldbuckets, oldbucket*uintptr(t.bucketsize))
+			// Preserve b.tophash because the evacuation
+			// state is maintained there.
+			ptr := add(b, dataOffset)
+			n := uintptr(t.bucketsize) - dataOffset
+			memclrHasPointers(ptr, n)
+		}
+	}
+
+	if oldbucket == h.nevacuate {
+		advanceEvacuationMark(h, t, newbit)
+	}
+}
+```
+
+
+上述函数就是迁移过程最核心的拷贝工作了。
+
+整个迁移过程并不难。这里需要说明的是 x ，y 代表的意义。由于扩容以后，新的桶数组是原来桶数组的2倍。用 x 代表新的桶数组里面低位的那一半，用 y 代表高位的那一半。其他的变量就是一些标记了，游标和标记 key - value 原来所在的位置。详细的见代码注释。
+
+上图中表示了迁移开始之后的过程。可以看到旧的桶数组里面的桶在迁移到新的桶中，并且新的桶也在不断的写入新的 key 值。
+
+一直拷贝键值对，直到旧桶中所有的键值都拷贝到了新的桶中。
+
+最后一步就是释放旧桶，oldbuckets 的指针置为 null。到此，一次迁移过程就完全结束了。
+
+
+
+**等量扩容**
+
+严格意义上这种方式并不能算是扩容。但是函数名是 Grow，姑且暂时就这么叫吧。
+
+在 go1.8 的版本开始，添加了 sameSizeGrow，当 overflow buckets
+的数量超过一定数量 (2^B) 但装载因子又未达到 6.5 的时候，此时可能存在部分空的bucket，即 bucket 的使用率低，这时会触发sameSizeGrow，即 B 不变，但走数据迁移流程，将 oldbuckets 的数据重新紧凑排列提高 bucket 的利用率。当然在 sameSizeGrow 过程中，不会触发 loadFactorGrow。
+
+
+## Map 实现中的一些优化
+
+在探究如何实现一个线程安全的 Map 之前，先把之前说到个一些亮点优化点，小结一下。
+
+在 Redis 中，采用增量式扩容的方式处理哈希冲突。当平均查找长度超过 5 的时候就会触发增量扩容操作，保证 hash 表的高性能。
+
+同时 Redis 采用头插法，保证插入 key 值时候的性能。
+
+在 Java 中，当桶的个数超过了64个以后，并且冲突节点为8或者大于8，这个时候就会触发红黑树转换。这样能保证链表在很长的情况下，查找长度依旧不会太长，并且红黑树保证最差情况下也支持 O(log n) 的时间复杂度。
+
+Java 在迁移之后有一个非常好的设计，只需要比较迁移之后桶个数的最高位是否为0，如果是0，key 在新桶内的相对位置不变，如果是1，则加上桶的旧的桶的个数 oldCap 就可以得到新的位置。
+
+在 Go 中优化的点比较多：
+
+1. 哈希算法选用高效的 memhash 算法 和 CPU AES指令集。AES 指令集充分利用 CPU 硬件特性，计算哈希值的效率超高。
+2. key - value 的排列设计成 key 放在一起，value 放在一起，而不是key，value成对排列。这样方便内存对齐，数据量大了以后节约内存对齐造成的一些浪费。
+3. key，value 的内存大小超过128字节以后自动转成存储一个指针。
+4. tophash 数组的设计加速了 key 的查找过程。tophash 也被复用，用来标记扩容操作时候的状态。
+5. 用位运算转换求余操作，m % n ，当 n = 1 << B 的时候，可以转换成 m & (1 << B - 1) 。
+6. 增量式扩容。
+7. 等量扩容，紧凑操作。
+8. Go 1.9 版本以后，Map 原生就已经支持线程安全。(在下一章中重点讨论这个问题)
+
+
+当然 Go 中还有一些需要再优化的地方：
+
+在迁移的过程中，当前版本不会重用 overflow 桶，而是直接重新申请一个新的桶。这里可以优化成优先重用没有指针指向的 overflow 桶，当没有可用的了，再去申请一个新的。这一点作者已经写在了 TODO 里面了。
+动态合并多个 empty 的桶。
+当前版本中没有 shrink 操作，Map 只能增长而不能收缩。这块 Redis 有相关的实现。
 
 
 
@@ -989,7 +1275,3 @@ search:
 参考博客：
 [一缕殇流化隐半边冰霜](https://halfrost.com/go_map_chapter_one/)
 [码农桃花源](https://qcrao91.gitbook.io/go/map/map-de-di-ceng-shi-xian-yuan-li-shi-shi-mo)
-
-
-
-
