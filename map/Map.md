@@ -1290,7 +1290,11 @@ type Map struct {
 }
 ```
 
+在这个 Map 中，包含一个互斥量 mu，一个原子值 read，一个非线程安全的字典 map，这个字典的 key 是 interface{} 类型，value 是 *entry 类型。最后还有一个 int 类型的计数器。
 
+先来说说原子值。atomic.Value 这个类型有两个公开的指针方法，Load 和 Store 。Load 方法用于原子地的读取原子值实例中存储的值，它会返回一个 interface{} 类型的结果，并且不接受任何参数。Store 方法用于原子地在原子值实例中存储一个值，它接受一个 interface{} 类型的参数而没有任何结果。在未曾通过 Store 方法向原子值实例存储值之前，它的 Load 方法总会返回 nil。
+
+在这个线程安全的字典中，Load 和 Store 的都是一个 readOnly 的数据结构。
 
 
 
