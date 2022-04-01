@@ -17,7 +17,7 @@
 
 ## Go语言设计与实现
 
-2022-01-01 ~ 2022-04-05 完成
+2022-01-01 ~ 2022-04-10 完成
 
 
 
@@ -27,31 +27,41 @@
 |  ✅ [Goroutine](Goroutine.md)   |                    |              |
 |  ✅ [Channel](channel.md)       |                    |              |
 |  ✅ [Slice](slice.md)           |                    |              |
-|  ✅ [Map](Map.md)               |  2022.3.28         | 2022.4.1    |
-|  😂[String](String.md)          |  2022.4.1          | 2022.4.1     |
-|  [Interface](Interface.md)      |                    |              |
-|  [Reflection](reflection.md)    |                    |              |
-
+|  ✅ [Map](Map.md)               |  2022.3.28         | 2022.4.2     |
+|  [Interface](Interface.md)      |  2022.4.3          | 2022.4.3     |
+|  [Reflection](reflection.md)    |  2022.4.4          | 2022.4.4     |
+|  [String](String.md)            |  2022.4.5          | 2022.4.5     |
+|  [Gc](gc.md)                    |  2022.4.6          | 2022.4.6     |
+|  [for and range]()              |  2022.4.7          | 2022.4.7     |
+|  [select]()                     |  2022.4.7          | 2022.4.7     |
+|  [defer]()                      |  2022.4.7          | 2022.4.7     |
+|  [panic and recover ]()         |  2022.4.8          | 2022.4.8     |
+|  [make and new]()               |  2022.4.8          | 2022.4.8     |
+|  [Build and Link](build.md)     |  2022.4.8          | 2022.4.8     |
+|  [defer 和逃逸分析]()             |  2022.4.9          | 2022.4.9     |
+|  [Lib](lib.md)                  |  2022.4.9          | 2022.4.9     |
+|  [内存对齐]()                    |  2022.4.10          | 2022.4.10     |
+|  ✅ [ASM](asm.md)               |  2021.10.5          | 2021.10.5     |
 
 
 <!-- 1. ✅ [Goroutine](Goroutine.md)
-2. ✅ [Channel](channel.md)
-3. ✅ [Slice](slice.md)
-4. ✅ [Map](Map.md)  
-5. [String](String.md)
-6. [for and range]()
-7. [select]()
-8. [defer]()
-9. [panic and recover ]()
-10. [make and new]()  
-11. [Interface](Interface.md)
-12. [Reflection](reflection.md)
-13. [Gc](gc.md)  
-14. [Build and Link](build.md)
-15. [defer 和逃逸分析]()
-16. [Lib](lib.md)
-17. [内存对齐]()
-18. ✅ [ASM](asm.md)   -->
+1. ✅ [Channel](channel.md)
+2. ✅ [Slice](slice.md)
+3. ✅ [Map](Map.md)  
+4. [String](String.md)
+5. [for and range]()
+6. [select]()
+7. [defer]()
+8. [panic and recover ]()
+9.  [make and new]()  
+10. [Interface](Interface.md)
+11. [Reflection](reflection.md)
+12. [Gc](gc.md)  
+13. [Build and Link](build.md)
+14. [defer 和逃逸分析]()
+15. [Lib](lib.md)
+16. [内存对齐]()
+17. ✅ [ASM](asm.md)   -->
 
 
 
