@@ -3,7 +3,11 @@
 2. [可以边遍历边删除吗?](#可以边遍历边删除吗)
 3. [map 的删除过程是怎样的?](#map-的删除过程是怎样的)
 4. [可以对 map 的元素取地址吗?](#可以对-map-的元素取地址吗)
-5. [map 的扩容过程是怎样的 ?](#map-的扩容过程是怎样的-)
+5. [如何比较两个 map 相等?](#如何比较两个-map-相等)
+6. [如何实现两种 get 操作?](#如何实现两种-get-操作)
+7. [map 的遍历过程是怎样的?](#map-的遍历过程是怎样的)
+8. [map 中的 key 为什么是无序的?](#map-中的-key-为什么是无序的)
+9. [map 的扩容过程是怎样的 ?](#map-的扩容过程是怎样的-)
 
 
 ## map 是线程安全的吗?
@@ -106,6 +110,135 @@ func main() {
 ```
 
 如果通过其他 hack 的方式，例如 unsafe.Pointer 等获取到了 key 或 value 的地址，也不能长期持有，因为一旦发生扩容，key 和 value 的位置就会改变，之前保存的地址也就失效了。
+
+
+
+## 如何比较两个 map 相等?
+
+map 深度相等的条件：
+
+```go
+都为 nil
+非空、长度相等，指向同一个 map 实体对象
+相应的 key 指向的 value “深度”相等
+```
+
+直接将使用 map1 == map2 是错误的。这种写法只能比较 map 是否为 nil。
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    var m map[string]int
+    var n map[string]int
+
+    fmt.Println(m == nil)
+    fmt.Println(n == nil)
+
+    // 不能通过编译
+    fmt.Println(m == n)
+}
+```
+
+输出结果：
+```go
+ // ./main2.go:13:14: invalid operation: m == n (map can only be compared to nil)
+
+```
+
+因此只能是遍历map 的每个元素，比较元素是否都是深度相等。
+
+## 如何实现两种 get 操作?
+
+Go 语言中读取 map 有两种语法：带 comma 和 不带 comma。当要查询的 key 不在 map 里，带 comma 的用法会返回一个 bool 型变量提示 key 是否在 map 中；而不带 comma 的语句则会返回一个 key 类型的零值。如果 key 是 int 型就会返回 0，如果 key 是 string 类型，就会返回空字符串。
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    ageMap := make(map[string]int)
+    ageMap["qcrao"] = 18
+
+    // 不带 comma 用法
+    age1 := ageMap["stefno"]
+    fmt.Println(age1)
+
+    // 带 comma 用法
+    age2, ok := ageMap["stefno"]
+    fmt.Println(age2, ok)
+}
+```
+
+运行结果：
+
+```go
+0
+0 false
+```
+
+以前一直觉得好神奇，怎么实现的？这其实是编译器在背后做的工作：分析代码后，将两种语法对应到底层两个不同的函数。
+
+```go
+// src/runtime/hashmap.go
+func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer
+func mapaccess2(t *maptype, h *hmap, key unsafe.Pointer) (unsafe.Pointer, bool)
+```
+
+源码里，函数命名不拘小节，直接带上后缀 1，2，完全不理会《代码大全》里的那一套命名的做法。从上面两个函数的声明也可以看出差别了，mapaccess2 函数返回值多了一个 bool 型变量，两者的代码也是完全一样的，只是在返回值后面多加了一个 false 或者 true。
+另外，根据 key 的不同类型，编译器还会将查找、插入、删除的函数用更具体的函数替换，以优化效率：
+
+这些函数的参数类型直接是具体的 uint32、unt64、string，在函数内部由于提前知晓了 key 的类型，所以内存布局是很清楚的，因此能节省很多操作，提高效率。
+上面这些函数都是在文件 src/runtime/hashmap_fast.go 里。
+
+
+
+
+
+## map 的遍历过程是怎样的?
+
+本来 map 的遍历过程比较简单：遍历所有的 bucket 以及它后面挂的 overflow bucket，然后挨个遍历 bucket 中的所有 cell。每个 bucket 中包含 8 个 cell，从有 key 的 cell 中取出 key 和 value，这个过程就完成了。
+但是，现实并没有这么简单。还记得前面讲过的扩容过程吗？扩容过程不是一个原子的操作，它每次最多只搬运 2 个 bucket，所以如果触发了扩容操作，那么在很长时间里，map 的状态都是处于一个中间态：有些 bucket 已经搬迁到新家，而有些 bucket 还待在老地方。
+因此，遍历如果发生在扩容的过程中，就会涉及到遍历新老 bucket 的过程，这是难点所在。
+我先写一个简单的代码样例，假装不知道遍历过程具体调用的是什么函数：
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+    ageMp := make(map[string]int)
+    ageMp["qcrao"] = 18
+
+    for name, age := range ageMp {
+        fmt.Println(name, age)
+    }
+}
+```
+
+执行命令：
+
+```go
+go tool compile -S main.go
+```
+
+
+**todo**
+
+
+## map 中的 key 为什么是无序的?
+
+
+
+
+
+
+
+
 
 
 
