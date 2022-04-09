@@ -171,7 +171,7 @@ type hmap struct {
 	B         uint8  // B = log_2 buckets  log以2为底，桶个数的对数 (总共能存 6.5 * 2^B 个元素)
 	noverflow uint16 // 近似溢出桶的个数
 	hash0     uint32 // 哈希种子
-
+	// buckets 记录桶在哪
 	buckets    unsafe.Pointer // 有 buckets = 2^B 个桶的数组. count==0 的时候，这个数组为 nil.
 	oldbuckets unsafe.Pointer // 旧的桶数组一半的元素
 	nevacuate  uintptr        // 扩容增长过程中的计数器(即将迁移的旧桶编号)
@@ -746,7 +746,7 @@ bucketloop:
 
 	// If we hit the max load factor or we have too many overflow buckets,
 	// and we're not already in the middle of growing, start growing.
-	// 没有找到当前的 key 值，并且检查最大负载因子，如果达到了最大负载因子，或者存在很多溢出的桶
+	// 没有找到当前的 key 值，并且检查最大负载因子，如果达到了最大负载因子，或者存在很多溢出的桶,开始扩容
 	if !h.growing() && (overLoadFactor(h.count+1, h.B) || tooManyOverflowBuckets(h.noverflow, h.B)) {
 		// 开始扩容
 		hashGrow(t, h)
