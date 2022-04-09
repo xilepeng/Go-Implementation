@@ -398,8 +398,6 @@ count 键值对数目
 	// If we hit the max load factor or we have too many overflow buckets,
 	// and we're not already in the middle of growing, start growing.
 
-
-
 	// 触发扩容时机
 	// 没有找到当前的 key 值，并且检查最大负载因子，如果达到了最大负载因子，或者存在很多溢出的桶,开始扩容
 	if !h.growing() && (overLoadFactor(h.count+1, h.B) || tooManyOverflowBuckets(h.noverflow, h.B)) {
@@ -459,3 +457,13 @@ func tooManyOverflowBuckets(noverflow uint16, B uint8) bool {
 
 
 ![翻倍扩容](../images/grow.png)
+
+
+
+
+
+
+
+**参考链接**
+
+[码农桃花源](https://qcrao91.gitbook.io/go/map/map-de-kuo-rong-guo-cheng-shi-zen-yang-de)
