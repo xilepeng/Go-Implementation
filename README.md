@@ -26,8 +26,8 @@
 |  :---------------               | :--------------    | :------------ |
 |  ✅ [Goroutine](Goroutine.md)   |                    |              |
 |  ✅ [Channel](channel.md)       |                    |              |
-|  ✅ [Slice](slice.md)           |                    |              |
 |  ✅ [Map](Map.md)               |  2022.3.28         | 2022.4.2     |
+|  ✅ [Slice](slice.md)           |                    | 2022.4.13     |
 |  [Interface](Interface.md)      |  2022.4.3          | 2022.4.3     |
 |  [Reflection](reflection.md)    |  2022.4.4          | 2022.4.4     |
 |  [String](String.md)            |  2022.4.5          | 2022.4.5     |

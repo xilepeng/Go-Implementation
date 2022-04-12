@@ -60,7 +60,7 @@ type slice struct {
 
 切片（slice）是对数组一个连续片段的引用，所以切片是一个引用类型
 
-
+两个切片共享同一个底层数组。如果一个切片修改了该底层数组的共享 部分，另一个切片也能感知到。
 
 
 
@@ -115,6 +115,43 @@ func main() {
 ## 切片的容量是怎样增长的?
 
 
+- 函数 append 会智能地处理底层数组的容量增长。
+- 在切片的容量小于 256 个元素时，总是会成倍地增加容量。
+- 一旦元素个数超过 256，容量的增长因子会设为 1.25，也就是会每次增加 25% 的容量。
+
+```go
+func growslice(et *_type, old slice, cap int) slice {
+	newcap := old.cap
+	doublecap := newcap + newcap
+	// 如果期望容量大于当前容量的两倍就会使用期望容量
+	if cap > doublecap {
+		newcap = cap
+	} else {
+		const threshold = 256
+		// 如果当前切片的长度小于阈值 256 就会将容量翻倍；
+		if old.cap < threshold {
+			newcap = doublecap
+		} else {
+			// 检查 0 < newcap 探测溢出，并预防或阻止无限循环
+			for 0 < newcap && newcap < cap {
+				// 小切片以2倍速增长，大切片以1.25倍速增长，这个公式给出了两者的平滑转变。
+				newcap += (newcap + 3*threshold) / 4
+			}
+			// 当newcap计算溢出的时候，设置newcap 为被请求的/期望 cap
+			if newcap <= 0 {
+				newcap = cap
+			}
+		}
+	}
+
+```
+
+1. 如果期望容量大于当前容量的两倍就会使用期望容量；
+2. 如果当前切片的长度小于阈值 256 就会将容量翻倍；
+3. 如果当前切片的长度大于阈值 256 就会每次增加 25% 的容量，直到新容量大于期望容量；
+
+
+
 切片的动态增长是通过内置函数 append 来实现的。这个函数可以快速且高效地增长切片。还可以通过对切片再次切片来缩小一个切片的大小。因为切片的底层内存也是在连续块中分配的，所以切片还能获得索引、迭代以及为垃圾回收优化的好处。
 
 切片是一个很小的对象，对底层数组进行了抽象，并提供相关的操作方法。
@@ -129,35 +166,6 @@ slice := array[1:2:3]
 
 之所以生成了新的切片，是因为原来数组的容量已经达到了最大值，再想扩容， Go 默认会先开一片内存区域，把原来的值拷贝过来，然后再执行 append() 操作。这种情况丝毫不影响原数组。避免 bug 产生。
 
-
-
-```go
-func growslice(et *_type, old slice, cap int) slice {
-	newcap := old.cap
-	doublecap := newcap + newcap
-	if cap > doublecap {
-		newcap = cap
-	} else {
-		const threshold = 256
-		if old.cap < threshold {
-			newcap = doublecap
-		} else {
-			// Check 0 < newcap to detect overflow
-			// and prevent an infinite loop.
-			for 0 < newcap && newcap < cap {
-				// Transition from growing 2x for small slices
-				// to growing 1.25x for large slices. This formula
-				// gives a smooth-ish transition between the two.
-				newcap += (newcap + 3*threshold) / 4
-			}
-			// Set newcap to the requested cap when
-			// the newcap calculation overflowed.
-			if newcap <= 0 {
-				newcap = cap
-			}
-		}
-	}
-```
 
 
 
