@@ -13,9 +13,7 @@ func main() {
 	fmt.Printf("slice=%v, slice_addr=%p, len=%d, cap=%d\n", slice, &slice, len(slice), cap(slice))
 	fmt.Printf("newSlice=%v, newSlice_addr=%p, len=%d, cap=%d\n", newSlice, &newSlice, len(newSlice), cap(newSlice))
 
-
 }
-
 
 // ➜  slice_append git:(main) ✗ go run main.go
 // slice=[10 20 30 40], slice_addr=0xc0000a4018, len=4, cap=4
