@@ -5,6 +5,7 @@
 3. [切片的容量是怎样增长的?](#切片的容量是怎样增长的)
 4. [nil 和 空切片的区别？](#nil-和-空切片的区别)
 5. [指针切片](#指针切片)
+6. [向一个nil的slice添加元素会发生什么？为什么？](#向一个nil的slice添加元素会发生什么为什么)
 
 
 
@@ -108,7 +109,51 @@ func main() {
 ## 切片作为函数参数?
 
 
+在函数间传递切片就是要在函数间以值的方式传递切片。由于切片的尺寸很小，在函数间复 制和传递切片成本也很低。
+
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	// 分配包含 100 万个整型值的切片
+	slice := make([]int, 1e6)
+	fmt.Printf("slice pointer = %p\n", &slice)
+	// 将 slice 传递到函数 foo
+	slice = foo(slice)
+	fmt.Printf("slice pointer = %p\n", &slice)
+}
+
+// 函数 foo 接收一个整型切片，并返回这个切片
+func foo(slice []int) []int {
+	return slice
+}
+```
+
+程序输出：
+```go
+slice pointer = 0xc0000a4018
+slice pointer = 0xc0000a4018
+```
+
+在 64 位架构的机器上，一个切片需要 24 字节的内存:指针字段需要 8 字节，长度和容量字段分别需要 8 字节。由于与切片关联的数据包含在底层数组里，不属于切片本身，所以将切片复制到任意函数的时候，对底层数组大小都不会有影响。复制时只会复制切片本身，不会涉及底层数组。
+
 ![](../images/func_slice.png)
+
+
+在函数间传递 24 字节的数据会非常快速、简单。这也是切片效率高的地方。不需要传递指
+针和处理复杂的语法，只需要复制切片，按想要的方式修改数据，然后传递回一份新的切片副本。
+
+
+
+**在函数间传递映射**
+
+在函数间传递映射并不会制造出该映射的一个副本。实际上，当传递映射给一个函数，并对 这个映射做了修改时，所有对这个映射的引用都会察觉到这个修改。
+这个特性和切片类似，保证可以用很小的成本来复制映射。
+
+将切片或者映射传递给函数成本很小，并且不会复制底层的数据结构。
 
 
 
@@ -295,21 +340,28 @@ import "fmt"
 
 func main() {
 	slice := []int{10, 20, 30, 40}
-	for index, value := range slice {
-		fmt.Printf("value = %d , value-addr = %x , slice-addr = %x\n", value, &value, &slice[index])
+	for index, copy_value := range slice {
+		fmt.Printf("Value = %d , Value-Addr = %x , Elem-Addr = %x\n", copy_value, &copy_value, &slice[index])
 	}
 }
+
 ```
 程序输出：
 
 ```go
-➜  demo git:(main) ✗ go run main.go
-value = 10 , value-addr = c0000b2008 , slice-addr = c0000b4000
-value = 20 , value-addr = c0000b2008 , slice-addr = c0000b4008
-value = 30 , value-addr = c0000b2008 , slice-addr = c0000b4010
-value = 40 , value-addr = c0000b2008 , slice-addr = c0000b4018
+Value = 10 , Value-Addr = c0000b2008 , Elem-Addr = c0000b6000
+Value = 20 , Value-Addr = c0000b2008 , Elem-Addr = c0000b6008
+Value = 30 , Value-Addr = c0000b2008 , Elem-Addr = c0000b6010
+Value = 40 , Value-Addr = c0000b2008 , Elem-Addr = c0000b6018
 ```
-从上面结果我们可以看到，如果用 range 的方式去遍历一个切片，拿到的 Value 其实是切片里面的值拷贝。所以每次打印 Value 的地址都不变。
+
+当迭代切片时，关键字 range 会返回两个值。第一个值是当前迭代到的索引位置，第二个 值是该位置对应元素值的一份副本
+因为迭代返回的变量是一个迭代过程中根据切片依次赋值的新变量，所以 value 的地址总 是相同的。
+要想获取每个元素的地址，可以使用切片变量和索引值。
+关键字 range 总是会从切片头部开始迭代。如果想对迭代做更多的控制，依旧可以使用传统的 for 循环
+
+
+从上面结果我们可以看到，**如果用 range 的方式去遍历一个切片，拿到的 Value 其实是切片里面的值拷贝**。所以每次打印 Value 的地址都不变。
 
 由于 Value 是值拷贝的，并非引用传递，所以直接改 Value 是达不到更改原切片值的目的的，需要通过 &slice[index] 获取真实的地址。
 
@@ -322,6 +374,13 @@ value = 40 , value-addr = c0000b2008 , slice-addr = c0000b4018
 ![](../images/pointer_slice.png)
 ![](../images/pointer_slice_1.png)
 
+
+
+
+## 向一个nil的slice添加元素会发生什么？为什么？
+
+- 其实 nil slice 或者 empty slice 都是可以通过调用 append 函数来获得底层数组的扩容。
+- 最终都是调用 mallocgc 来向 Go 的内存管理器申请到一块内存，然后再赋给原来的nil slice 或 empty slice，然后摇身一变，成为“真正”的 slice 了。
 
 
 参考链接：
