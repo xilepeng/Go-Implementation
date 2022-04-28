@@ -21,27 +21,25 @@
 
 
 
-
-|  需要完成目标                     |  开始时间           | 完成时间       |
-|  :---------------               | :--------------   | :------------ |
-|  ✅ [ASM](asm.md)               |  2021.10.5         | 2021.10.5     |
-|  ✅ [Goroutine](Goroutine.md)   |                    |              |
-|  ✅ [Channel](channel.md)       |                    |              |
-|  ✅ [Map](Map.md)               |  2022.3.28         | 2022.4.2     |
-|  ✅ [Slice](slice.md)           |  2022.4.13         | 2022.4.14    |
-|  ✅ [for and range]()           |  2022.4.15         | 2022.4.15    |
-|  [Interface](Interface.md)      |  2022.4.3          | 2022.4.3     |
-|  [Reflection](reflection.md)    |  2022.4.4          | 2022.4.4     |
-|  [String](String.md)            |  2022.4.5          | 2022.4.5     |
-|  [Gc](gc.md)                    |  2022.4.6          | 2022.4.6     |
-|  [select]()                     |  2022.4.7          | 2022.4.7     |
-|  [defer]()                      |  2022.4.7          | 2022.4.7     |
-|  [panic and recover ]()         |  2022.4.8          | 2022.4.8     |
-|  [make and new]()               |  2022.4.8          | 2022.4.8     |
-|  [Build and Link](build.md)     |  2022.4.8          | 2022.4.8     |
-|  [defer 和逃逸分析]()             |  2022.4.9          | 2022.4.9     |
-|  [Lib](lib.md)                  |  2022.4.9          | 2022.4.9     |
-|  [内存对齐]()                    |  2022.4.10         | 2022.4.10     |
+|  目标                             | 快速完成        |
+|  :---------------                | :------------: |
+| 👀 [ASM](asm.md)                  |    ✅ 完成      |
+| 🌃 [Build and Link](build.md)     |    ❌       |
+| ✅ [Array Vs Slice](slice.md)     |    ✅ 完成      |
+| ✅ [Map](Map.md)                  |    ✅ 完成      |
+| ✅ [String](String.md)            |    ✅ 完成      |
+| 🖌 [Interface](Interface.md)      |    ❌       |
+| 🖌 [Reflection](reflection.md)    |    ❌       |
+| ✅ [for and range]()              |    ✅ 完成      |
+| ✅ [select]()                     |    ❌       |
+| ✅ [defer]()                      |    ❌       |
+| ✅ [panic and recover ]()         |    ❌       | 
+| ✅ [make and new]()               |    ❌       |
+| 📝 [Goroutine](Goroutine.md)      |    ✅ 完成       |
+| 📝 [Channel](channel.md)          |    ✅ 完成       |
+| 🛠 [Gc](gc.md)                    |    ❌       |
+| 🛠 [内存对齐]()                    |    ❌       |
+| 👀 [Lib](lib.md)                  |    ❌       |
 
 
 
