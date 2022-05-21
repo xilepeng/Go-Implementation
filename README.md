@@ -28,7 +28,7 @@
 | ✅ [Array Vs Slice](slice.md)     |    ✅ 完成      |
 | ✅ [Map](Map.md)                  |    ✅ 完成      |
 | ✅ [String](String.md)            |    ✅ 完成      |
-| 🖌 [Interface](Interface.md)      |    ❌       |
+| 🖌 [Interface](Interface.md)      |    5.22 完成      |
 | 🖌 [Reflection](reflection.md)    |    ❌       |
 | ✅ [for and range]()              |    ✅ 完成      |
 | ✅ [select]()                     |    ❌       |
