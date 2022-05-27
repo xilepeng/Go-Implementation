@@ -1,5 +1,44 @@
 
 
+
+
+**nil 和 non-nil** 
+
+我们可以通过一个例子理解Go **语言的接口类型不是任意类型** 这一句话，下面的代码在 main 函数中初始化了一个 *TestStruct 类型的变量，由于指针的零值是 nil，所以变量 s 在初始化之后也是 nil：
+
+```go
+package main
+
+import "fmt"
+
+type TestStruct struct{}
+
+func NilOrNot(v interface{}) bool {
+	return v == nil
+}
+
+func main() {
+	var s *TestStruct
+	fmt.Println(s == nil)
+	fmt.Println(NilOrNot(s))
+}
+
+// ➜  demo01 git:(main) ✗ go run main.go
+// true
+// false
+```
+
+
+我们简单总结一下上述代码执行的结果：
+
+- 将上述变量与 nil 比较会返回 true；
+- 将上述变量传入 NilOrNot 方法并与 nil 比较会返回 false；
+  
+出现上述现象的原因是 —— 调用 NilOrNot 函数时发生了隐式的类型转换，除了向方法传入参数之外，变量的赋值也会触发隐式类型转换。在类型转换时，*TestStruct 类型会转换成 interface{} 类型，转换后的变量不仅包含转换前的变量，还包含变量的类型信息 TestStruct，所以转换后的变量与 nil 不相等。
+
+
+
+
 以下代码基于 Go 1.18.2
 
 
@@ -58,22 +97,51 @@ type _type struct {
 }
 ```
 
-
+- size 字段存储了类型占用的内存空间，为内存空间的分配提供信息；
+- hash 字段能够帮助我们快速确定类型是否相等；
+- equal 字段用于判断当前类型的多个对象是否相等，该字段是为了减少 Go 语言二进制包大小从 typeAlg 结构体中迁移过来的4；
+  
+我们只需要对 runtime._type 结构体中的字段有一个大体的概念，不需要详细理解所有字段的作用和意义。
 
 
 
 
 /src/runtime/runtime2.go 
 
-```go
-type iface struct {
-	tab  *itab
-	data unsafe.Pointer
-}
+Go 语言根据接口类型是否包含一组方法将接口类型分成了两类：
 
+- 使用 runtime.iface 结构体表示包含方法的接口
+- 使用 runtime.eface 结构体表示不包含任何方法的 interface{} 类型；
+
+
+
+runtime.eface 结构体在 Go 语言中的定义是这样的：
+
+```go
 type eface struct {
 	_type *_type
 	data  unsafe.Pointer
 }
 ```
+
+由于 interface{} 类型不包含任何方法，所以它的结构也相对来说比较简单，只包含指向底层数据和类型的两个指针。从上述结构我们也能推断出 — Go 语言的任意类型都可以转换成 interface{}。
+
+另一个用于表示接口的结构体是 runtime.iface，这个结构体中有指向原始数据的指针 data，不过更重要的是 runtime.itab 类型的 tab 字段。
+
+
+
+```go
+type iface struct {
+	tab  *itab
+	data unsafe.Pointer
+}
+```
+
+接下来我们将详细分析 Go 语言接口中的这两个类型，即 runtime._type 和 runtime.itab。
+
+## 类型结构体 
+
+runtime._type 是 Go 语言类型的运行时表示。下面是运行时包中的结构体，其中包含了很多类型的元信息，例如：类型的大小、哈希、对齐以及种类等。
+
+
 
