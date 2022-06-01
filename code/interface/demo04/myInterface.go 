@@ -1,0 +1,7 @@
+package myInterface
+
+// 自定义接口
+type Shape interface{
+	Area() float64
+	Perimeter() float64
+}

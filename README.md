@@ -29,9 +29,9 @@
 | ✅ [Map](Map.md)                  |    ✅ 完成      |
 | ✅ [String](String.md)            |    ✅ 完成      |
 | 🖌 [Interface](Interface.md)      |    ❌ 完成      |
-| 🖌 [Reflection](reflection.md)    |    ✅ 完成      |
+| 🖌 [Reflection](reflection.md)    |    ✅ 💻 完成      |
 | ✅ [for and range]()              |    ✅ 完成      |
-| ✅ [select]()                     |    ❌       |
+| ✅ [select]()                     |    ❌ 💻      |
 | ✅ [defer]()                      |    ❌       |
 | ✅ [panic and recover ]()         |    ❌       | 
 | ✅ [make and new]()               |    ❌       |
