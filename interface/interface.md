@@ -1,4 +1,124 @@
 
+1. [iface 和 eface 的区别是什么?](#iface-和-eface-的区别是什么)
+2. [Go 接口与 C++ 接口有何异同？](#go-接口与-c-接口有何异同)
+3. [如何用 interface 实现多态 ?](#如何用-interface-实现多态-)
+4. [接口转换的原理 ?](#接口转换的原理-)
+
+## iface 和 eface 的区别是什么?
+
+iface 和 eface 都是 Go 中描述接口的底层结构体，区别在于 iface 描述的接口包含方法，而 eface 则是不包含任何方法的空接口：interface{}。
+
+## Go 接口与 C++ 接口有何异同？
+
+接口定义了一种规范，描述了类的行为和功能，而不做具体实现。
+
+C++ 的接口是使用抽象类来实现的，如果类中至少有一个函数被声明为纯虚函数，则这个类就是抽象类。纯虚函数是通过在声明中使用 "= 0" 来指定的。
+
+```c++
+class Shape
+{
+   public:
+      // 纯虚函数
+      virtual double getArea() = 0;
+   private:
+      string name;      // 名称
+};
+```
+
+设计抽象类的目的，是为了给其他类提供一个可以继承的适当的基类。抽象类不能被用于实例化对象，它只能作为接口使用。
+派生类需要明确地声明它继承自基类，并且需要实现基类中所有的纯虚函数。
+
+**C++ 定义接口的方式称为“侵入式”，而 Go 采用的是 “非侵入式”，不需要显式声明，只需要实现接口定义的函数，编译器自动会识别。**
+
+C++ 和 Go 在定义接口方式上的不同，也导致了底层实现上的不同。C++ 通过虚函数表来实现基类调用派生类的函数；而 Go 通过 itab 中的 fun 字段来实现接口变量调用实体类型的函数。C++ 中的虚函数表是在编译期生成的；而 Go 的 itab 中的 fun 字段是在运行期间动态生成的。原因在于，Go 中实体类型可能会无意中实现 N 多接口，很多接口并不是本来需要的，所以不能为类型实现的所有接口都生成一个 itab， 这也是“非侵入式”带来的影响；这在 C++ 中是不存在的，因为派生需要显示声明它继承自哪个基类。
+
+
+## 如何用 interface 实现多态 ?
+
+
+```go
+package main
+
+import "fmt"
+
+// 定义 Person 接口
+type Person interface {
+	job()
+	growUp()
+}
+
+// 定义结构体
+type Student struct {
+	age int
+}
+type Coder struct {
+	age int
+}
+
+func main() {
+	// 定义 Student 对象
+	mojo := Student{age: 18}
+	WhatJob(&mojo)
+	growUp(&mojo)
+	fmt.Println(mojo)
+
+	// 定义 Coder 对象
+	hfbpw := Coder{age: 24}
+	WhatJob(hfbpw)
+	growUp(hfbpw)
+	fmt.Println(hfbpw)
+
+}
+
+// 定义函数参数为 Person 的2个函数
+func WhatJob(p Person) {
+	p.job()
+}
+func growUp(p Person) {
+	p.growUp()
+}
+
+// Student 类型没有实现接口
+func (p Student) job() {
+	fmt.Println("I am a Student")
+	return
+}
+
+// *Student 类型实现了接口
+func (p *Student) growUp() {
+	p.age += 1
+	return
+}
+
+// Coder 类型实现了接口
+func (p Coder) job() {
+	fmt.Println("I am a Coder")
+	return
+}
+func (p Coder) growUp() {
+	p.age += 10
+}
+```
+
+```go
+I am a Student
+{19}
+I am a Coder
+{24}
+```
+
+
+main 函数里先生成 Student 和 Programmer 的对象，再将它们分别传入到函数 whatJob 和 growUp。函数中，直接调用接口函数，实际执行的时候是看最终传入的实体类型是什么，调用的是实体类型实现的函数。于是，不同对象针对同一消息就有多种表现，多态就实现了。
+更深入一点来说的话，在函数 whatJob() 或者 growUp() 内部，接口 person 绑定了实体类型 *Student 或者 Programmer。根据前面分析的 iface 源码，这里会直接调用 fun 里保存的函数，类似于： s.tab->fun[0]，而因为 fun 数组里保存的是实体类型实现的函数，所以当函数传入不同的实体类型时，调用的实际上是不同的函数实现，从而实现多态。
+
+
+
+## 接口转换的原理 ?
+
+
+
+
+
 
 
 
@@ -45,9 +165,9 @@ func main() {
 src/runtime/runtime2.go
 
 
-## 一. 数据结构
+**一. 数据结构**
 
-## 1. 非空 interface 数据结构
+ 1. 非空 interface 数据结构
 
 非空的 interface 初始化的底层数据结构是 iface，稍后在汇编代码中能验证这一点。
 ```go
@@ -139,7 +259,9 @@ type iface struct {
 
 接下来我们将详细分析 Go 语言接口中的这两个类型，即 runtime._type 和 runtime.itab。
 
-## 类型结构体 
+
+
+**类型结构体** 
 
 runtime._type 是 Go 语言类型的运行时表示。下面是运行时包中的结构体，其中包含了很多类型的元信息，例如：类型的大小、哈希、对齐以及种类等。
 
