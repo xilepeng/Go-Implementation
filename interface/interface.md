@@ -3,6 +3,9 @@
 2. [Go 接口与 C++ 接口有何异同？](#go-接口与-c-接口有何异同)
 3. [如何用 interface 实现多态 ?](#如何用-interface-实现多态-)
 4. [接口转换的原理 ?](#接口转换的原理-)
+5. [Go 语言与鸭子类型的关系 ?](#go-语言与鸭子类型的关系-)
+6. [方法的值接收者和指针接收者的区别 ?](#方法的值接收者和指针接收者的区别-)
+7. [接口的构造过程是怎样的 ？](#接口的构造过程是怎样的-)
 
 ## iface 和 eface 的区别是什么?
 
@@ -114,6 +117,266 @@ main 函数里先生成 Student 和 Programmer 的对象，再将它们分别传
 
 
 ## 接口转换的原理 ?
+
+当判定一种类型是否满足某个接口时，Go 使用类型的方法集和接口所需要的方法集进行匹配，如果类型的方法集完全包含接口的方法集，则可认为该类型实现了该接口。
+
+```go
+package main
+
+import "fmt"
+
+type coder interface {
+    code()
+    run()
+}
+
+type runner interface {
+    run()
+}
+
+type Gopher struct {
+    language string
+}
+
+func (g Gopher) code() {
+    return
+}
+
+func (g Gopher) run() {
+    return
+}
+
+func main() {
+    var c coder = Gopher{}
+
+    var r runner
+    r = c
+    fmt.Println(c, r)
+}
+```
+
+简单解释下上述代码：定义了两个 interface: coder 和 runner。定义了一个实体类型 Gopher，类型 Gopher 实现了两个方法，分别是 run() 和 code()。main 函数里定义了一个接口变量 c，绑定了一个 Gopher 对象，之后将 c 赋值给另外一个接口变量 r 。赋值成功的原因是 c 中包含 run() 方法。这样，两个接口变量完成了转换。
+
+
+
+## Go 语言与鸭子类型的关系 ?
+
+先直接来看维基百科里的定义：
+
+```go
+If it looks like a duck, swims like a duck, and quacks like a duck, then it probably is a duck.
+```
+
+
+翻译过来就是：如果某个东西长得像鸭子，像鸭子一样游泳，像鸭子一样嘎嘎叫，那它就可以被看成是一只鸭子。
+Duck Typing，鸭子类型，是动态编程语言的一种对象推断策略，它更关注对象能如何被使用，而不是对象的类型本身。Go 语言作为一门静态语言，它通过通过接口的方式完美支持鸭子类型。
+
+Go 语言作为一门现代静态语言，是有后发优势的。它引入了动态语言的便利，同时又会进行静态语言的类型检查，写起来是非常 Happy 的。Go 采用了折中的做法：不要求类型显示地声明实现了某个接口，只要实现了相关的方法即可，编译器就能检测到。
+
+```go
+package main
+
+import "fmt"
+
+// 定义一个接口，和使用此接口作为参数的函数
+type IGreeting interface {
+	sayHello()
+}
+
+func sayHello(i IGreeting) {
+	i.sayHello()
+}
+
+// 定义 Go 类型
+type Go struct{}
+
+// sayHello 使用值接收者实现了一个方法
+func (g Go) sayHello() {
+	fmt.Println("Hi, I am Go")
+}
+
+// 方法能给用户定义的类型添加新的行为。方法实际上也是函数，只是在声明时，在关键字 func 和方法名之间增加了一个参数
+type CPlus struct{}
+
+func (c CPlus) sayHello() {
+	fmt.Println("Hi, I am CPlus")
+}
+
+func main() {
+	Golang := Go{}
+	CPlus := CPlus{}
+	sayHello(Golang)
+	sayHello(CPlus)
+}
+
+// Hi, I am Go
+// Hi, I am CPlus
+
+```
+
+
+在 main 函数中，调用调用 sayHello() 函数时，传入了 Golang、CPlus 对象，它们并没有显式地声明实现了 IGreeting 类型，只是实现了接口所规定的 sayHello() 函数。实际上，编译器在调用 sayHello() 函数时，会隐式地将 Golang、CPlus 对象转换成 IGreeting 类型，这也是静态语言的类型检查功能。
+
+顺带再提一下动态语言的特点：
+
+`变量绑定的类型是不确定的，在运行期间才能确定 函数和方法可以接收任何类型的参数，且调用时不检查参数类型 不需要实现接口`
+
+总结一下，鸭子类型是一种动态语言的风格，在这种风格中，一个对象有效的语义，不是由继承自特定的类或实现特定的接口，而是由它"当前方法和属性的集合"决定。Go 作为一种静态语言，通过接口实现了 鸭子类型，实际上是 Go 的编译器在其中作了隐匿的转换工作。
+
+
+
+## 方法的值接收者和指针接收者的区别 ?
+
+
+方法能给用户自定义的类型添加新的行为。它和函数的区别在于方法有一个接收者，给一个函数添加一个接收者，那么它就变成了方法。接收者可以是值接收者，也可以是指针接收者。
+
+在调用方法的时候，值类型既可以调用值接收者的方法，也可以调用指针接收者的方法；指针类型既可以调用指针接收者的方法，也可以调用值接收者的方法。
+
+也就是说，不管方法的接收者是什么类型，该类型的值和指针都可以调用，不必严格符合接收者的类型。
+
+```go
+package main
+
+import "fmt"
+
+type Person struct {
+	age int
+}
+
+func (p Person) HowOld() int {
+	return p.age
+}
+
+func (p *Person) GrowUp() {
+	p.age++
+}
+
+func main() {
+	// mojo 是值类型
+	mojo := Person{age: 18}
+	// 值类型 调用接收者也是值类型的方法
+	fmt.Println(mojo.HowOld())
+	// 值类型 调用接收者是指针类型的方法
+	mojo.GrowUp()
+	fmt.Println(mojo.HowOld())
+
+	// ------------------------
+	// mojo 是指针类型
+	pointer_mojo := &Person{age: 100}
+	// 指针类型 调用接收者也是值类型的方法
+	fmt.Println(pointer_mojo.HowOld())
+	// 指针类型 调用接收者是指针类型的方法
+	pointer_mojo.GrowUp()
+	fmt.Println(pointer_mojo.HowOld())
+
+}
+
+// 18
+// 19
+// 100
+// 101
+
+```
+
+调用了 growUp 函数后，不管调用者是值类型还是指针类型，它的 Age 值都改变了。
+实际上，当类型和方法的接收者类型不同时，其实是编译器在背后做了一些工作，用一个表格来呈现：
+
+
+
+|           |值接收者      |指针接收者   |
+|:--------- |:-----------|:-----------|
+|值类型调用者 | 方法会使用调用者的一个副本，类似于“传值” | 使用值的引用来调用方法，上例中，mojo.GrowUp() 实际上是 (&mojo).GrowUp()|
+|指针类型调用者| 指针被解引用为值，上例中，pointer_mojo 实际上是 (*pointer_mojo).HowOld() | 实际上也是“传值”，方法里的操作会影响到调用者，类似于指针传参，拷贝了一份指针|
+
+
+**值接收者和指针接收者**
+
+前面说过，不管接收者类型是值类型还是指针类型，都可以通过值类型或指针类型调用，这里面实际上通过语法糖起作用的。
+
+先说结论：**实现了接收者是值类型的方法，相当于自动实现了接收者是指针类型的方法；而实现了接收者是指针类型的方法，不会自动生成对应接收者是值类型的方法。**
+
+
+```go
+package main
+
+import "fmt"
+
+type coder interface {
+	code()
+	debug()
+}
+
+// 定义了一个结构体 Gopher，它实现了两个方法，一个值接收者，一个指针接收者。
+type Gopher struct {
+	language string
+}
+
+// 实现了接收者是值类型的方法，相当于自动实现了接收者是指针类型的方法
+func (g Gopher) code() {
+	fmt.Printf("I am Coding %s \n", g.language)
+}
+
+// 指针类型的接收者，不会自动生成对应值类型的方法
+func (g *Gopher) debug() {
+	fmt.Printf("I am Coding %s \n", g.language)
+}
+
+func main() {
+	var c coder = &Gopher{"Go"}
+	c.code()
+	c.debug()
+}
+
+// var c coder = Gopher{"Go"}
+
+// # command-line-arguments
+// ./main.go:23:16: cannot use Gopher{…} (value of type Gopher) as type coder in variable declaration:
+//         Gopher does not implement coder (debug method has pointer receiver)
+
+```
+
+
+**如果实现了接收者是值类型的方法，会隐含地也实现了接收者是指针类型的方法。**
+
+- 如果方法的接收者是值类型，无论调用者是对象还是对象指针，修改的都是对象的副本，不影响调用者；
+- 如果方法的接收者是指针类型，则调用者修改的是指针指向的对象本身。
+
+
+**使用指针作为方法的接收者的理由：**
+- 方法能够修改接收者指向的值。
+- 避免在每次调用方法时复制该值，在值的类型为大型结构体时，这样做会更加高效。
+
+是使用值接收者还是指针接收者，不是由该方法是否修改了调用者（也就是接收者）来决定，而是应该基于该类型的本质。
+如果类型具备“原始的本质”，也就是说它的成员都是由 Go 语言里内置的原始类型，如字符串，整型值等，那就定义值接收者类型的方法。像内置的引用类型，如 slice，map，interface，channel，这些类型比较特殊，声明他们的时候，实际上是创建了一个 header， 对于他们也是直接定义值接收者类型的方法。这样，调用函数时，是直接 copy 了这些类型的 header，而 header 本身就是为复制设计的。
+如果类型具备非原始的本质，不能被安全地复制，这种类型总是应该被共享，那就定义指针接收者的方法。比如 go 源码里的文件结构体（struct File）就不应该被复制，应该只有一份实体。
+
+
+
+
+
+## 接口的构造过程是怎样的 ？
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
