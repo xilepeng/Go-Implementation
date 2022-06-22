@@ -6,6 +6,9 @@
 5. [Go 语言与鸭子类型的关系 ?](#go-语言与鸭子类型的关系-)
 6. [方法的值接收者和指针接收者的区别 ?](#方法的值接收者和指针接收者的区别-)
 7. [接口的构造过程是怎样的 ？](#接口的构造过程是怎样的-)
+8. [编译器自动检测类型是否实现接口 ？](#编译器自动检测类型是否实现接口-)
+9. [类型转换和断言的区别 ?](#类型转换和断言的区别-)
+10. [接口的动态类型和动态值 ?](#接口的动态类型和动态值-)
 
 ## iface 和 eface 的区别是什么?
 
@@ -355,6 +358,572 @@ func main() {
 
 
 ## 接口的构造过程是怎样的 ？
+
+
+
+```go
+package main
+
+import "fmt"
+
+type Person interface {
+	growUp()
+}
+
+type student struct {
+	age int
+}
+
+func (p student) growUp() {
+	p.age += 1
+	return
+}
+
+// func (p *student) growUp() {
+// 	p.age += 1
+// 	return
+// }
+
+func main() {
+	var mojo = Person(student{age: 18})
+	// var mojo Person = &student{18}
+	mojo.growUp()
+	fmt.Println(mojo)
+}
+
+```
+
+
+```go
+➜  demo11 git:(main) ✗ go tool compile -S main.go
+"".student.growUp STEXT nosplit size=1 args=0x8 locals=0x0 funcid=0x0 align=0x0
+	0x0000 00000 (main.go:13)	TEXT	"".student.growUp(SB), NOSPLIT|ABIInternal, $0-8
+	0x0000 00000 (main.go:13)	FUNCDATA	$0, gclocals·33cdeccccebe80329f1fdbee7f5874cb(SB)
+	0x0000 00000 (main.go:13)	FUNCDATA	$1, gclocals·33cdeccccebe80329f1fdbee7f5874cb(SB)
+	0x0000 00000 (main.go:13)	FUNCDATA	$5, "".student.growUp.arginfo1(SB)
+	0x0000 00000 (main.go:13)	FUNCDATA	$6, "".student.growUp.argliveinfo(SB)
+	0x0000 00000 (main.go:13)	PCDATA	$3, $1
+	0x0000 00000 (main.go:15)	RET
+	0x0000 c3                                               .
+"".main STEXT size=138 args=0x0 locals=0x50 funcid=0x0 align=0x0
+	0x0000 00000 (main.go:23)	TEXT	"".main(SB), ABIInternal, $80-0
+	0x0000 00000 (main.go:23)	CMPQ	SP, 16(R14)
+	0x0004 00004 (main.go:23)	PCDATA	$0, $-2
+	0x0004 00004 (main.go:23)	JLS	125
+	0x0006 00006 (main.go:23)	PCDATA	$0, $-1
+	0x0006 00006 (main.go:23)	SUBQ	$80, SP
+	0x000a 00010 (main.go:23)	MOVQ	BP, 72(SP)
+	0x000f 00015 (main.go:23)	LEAQ	72(SP), BP
+	0x0014 00020 (main.go:23)	FUNCDATA	$0, gclocals·69c1753bd5f81501d95132d08af04464(SB)
+	0x0014 00020 (main.go:23)	FUNCDATA	$1, gclocals·713abd6cdf5e052e4dcd3eb297c82601(SB)
+	0x0014 00020 (main.go:23)	FUNCDATA	$2, "".main.stkobj(SB)
+	0x0014 00020 (main.go:24)	MOVQ	$18, ""..autotmp_9+40(SP)
+	0x001d 00029 (main.go:24)	MOVQ	""..autotmp_9+40(SP), AX
+	0x0022 00034 (main.go:24)	PCDATA	$1, $0
+	0x0022 00034 (main.go:24)	CALL	runtime.convT64(SB)
+	0x0027 00039 (main.go:24)	MOVQ	AX, ""..autotmp_21+48(SP)
+	0x002c 00044 (main.go:26)	MOVQ	(AX), CX
+	0x002f 00047 (main.go:26)	MOVQ	CX, AX
+	0x0032 00050 (main.go:26)	PCDATA	$1, $1
+	0x0032 00050 (main.go:26)	CALL	"".student.growUp(SB)
+	0x0037 00055 (main.go:27)	MOVUPS	X15, ""..autotmp_13+56(SP)
+	0x003d 00061 (main.go:27)	MOVQ	go.itab."".student,"".Person+8(SB), CX
+	0x0044 00068 (main.go:27)	MOVQ	CX, ""..autotmp_13+56(SP)
+	0x0049 00073 (main.go:27)	MOVQ	""..autotmp_21+48(SP), CX
+	0x004e 00078 (main.go:27)	MOVQ	CX, ""..autotmp_13+64(SP)
+	0x0053 00083 (<unknown line number>)	NOP
+	0x0053 00083 ($GOROOT/src/fmt/print.go:274)	MOVQos.Stdout(SB), BX
+	0x005a 00090 ($GOROOT/src/fmt/print.go:274)	LEAQgo.itab.*os.File,io.Writer(SB), AX
+	0x0061 00097 ($GOROOT/src/fmt/print.go:274)	LEAQ""..autotmp_13+56(SP), CX
+	0x0066 00102 ($GOROOT/src/fmt/print.go:274)	MOVL$1, DI
+	0x006b 00107 ($GOROOT/src/fmt/print.go:274)	MOVQDI, SI
+	0x006e 00110 ($GOROOT/src/fmt/print.go:274)	PCDATA	$1, $0
+	0x006e 00110 ($GOROOT/src/fmt/print.go:274)	CALLfmt.Fprintln(SB)
+	0x0073 00115 (main.go:28)	MOVQ	72(SP), BP
+	0x0078 00120 (main.go:28)	ADDQ	$80, SP
+	0x007c 00124 (main.go:28)	RET
+	0x007d 00125 (main.go:28)	NOP
+	0x007d 00125 (main.go:23)	PCDATA	$1, $-1
+	0x007d 00125 (main.go:23)	PCDATA	$0, $-2
+	0x007d 00125 (main.go:23)	NOP
+	0x0080 00128 (main.go:23)	CALL	runtime.morestack_noctxt(SB)
+	0x0085 00133 (main.go:23)	PCDATA	$0, $-1
+	0x0085 00133 (main.go:23)	JMP	0
+	
+```
+
+
+
+
+
+## 编译器自动检测类型是否实现接口 ？
+
+```go
+var _ io.Writer = (*myWriter)(nil)
+```
+
+编译器会由此检查 *myWriter 类型是否实现了 io.Writer 接口。 
+
+```go
+package main
+
+import "io"
+
+type myWriter struct{}
+
+// func (w myWriter) Write(p []byte) (n int, err error) {
+// 	return
+// }
+
+func main() {
+	// 检查 *myWriter 类型是否实现了 io.Writer 接口
+	var _ io.Writer = (*myWriter)(nil)
+	// 检查 myWriter 类型是否实现了 io.Writer 接口
+	var _ io.Writer = myWriter{}
+}
+
+```
+
+注释掉为 myWriter 定义的 Write 函数后，运行程序：
+
+```go
+# command-line-arguments
+./main.go:13:20: cannot use (*myWriter)(nil) (value of type *myWriter) as type io.Writer in variable declaration:
+        *myWriter does not implement io.Writer (missing Write method)
+./main.go:15:20: cannot use myWriter{} (value of type myWriter) as type io.Writer in variable declaration:
+        myWriter does not implement io.Writer (missing Write method)
+```
+
+报错信息：*myWriter/myWriter 未实现 io.Writer 接口，也就是未实现 Write 方法。
+
+解除注释后，运行程序不报错。
+
+实际上，上述赋值语句会发生隐式地类型转换，在转换的过程中，编译器会检测等号右边的类型是否实现了等号左边接口所规定的函数。
+
+总结一下，可通过在代码中添加类似如下的代码，用来检测类型是否实现了接口：
+
+```go
+var _ io.Writer = (*myWriter)(nil)
+var _ io.Writer = myWriter{}
+```
+
+
+
+## 类型转换和断言的区别 ?
+
+我们知道，Go 语言中不允许隐式类型转换，也就是说 = 两边，不允许出现类型不相同的变量。
+- 类型转换、类型断言本质都是把一个类型转换成另外一个类型。
+- 不同之处在于，类型断言是对接口变量进行的操作。
+
+**类型转换**
+
+对于类型转换而言，转换前后的两个类型要相互兼容才行。类型转换的语法为：
+<结果类型> := <目标类型> ( <表达式> )
+
+
+```go
+package main
+
+import "fmt"
+
+func main() {
+	var i int = 2
+	var f float64
+
+	f = float64(i)
+	fmt.Printf("类型：%T, 值：%v\n", f, f)
+
+	f = 5.2
+	a := int(f)
+	fmt.Printf("类型：%T, 值：%v\n", a, a)
+
+	// s := []int(a)
+	// cannot convert a (variable of type int) to type []int
+}
+
+```
+
+程序输出：
+```go
+类型：float64, 值：2
+类型：int, 值：5
+```
+
+上面的代码里，我定义了一个 int 型和 float64 型的变量，尝试在它们之前相互转换，结果是成功的：int 型和 float64 是相互兼容的。
+如果我把最后一行代码的注释去掉，编译器会报告类型不兼容的错误：
+
+
+```go
+cannot convert a (variable of type int) to type []int
+```
+
+
+**断言**
+
+前面说过，因为空接口 interface{} 没有定义任何函数，因此 Go 中所有类型都实现了空接口。当一个函数的形参是 interface{}，那么在函数中，需要对形参进行断言，从而得到它的真实类型。
+
+类型转换和类型断言有些相似，不同之处，在于类型断言是对接口进行的操作。
+
+```go
+package main
+
+import "fmt"
+
+type Student struct {
+	Name string
+	Age  int
+}
+
+func main() {
+	var i interface{} = new(Student)
+	s := i.(Student)
+	fmt.Println(s)
+}
+
+// panic: interface conversion: interface {} is *main.Student, not main.Student
+```
+
+运行输出：
+
+```go
+panic: interface conversion: interface {} is *main.Student, not main.Student
+```
+
+直接 panic 了，这是因为 i 是 *Student 类型，并非 Student 类型，断言失败。这里直接发生了 panic，线上代码可能并不适合这样做，可以采用“安全断言”的语法：
+
+```go
+package main
+
+import "fmt"
+
+type Student struct {
+	Name string
+	Age  int
+}
+
+func main() {
+	var i interface{} = new(Student)
+	s, ok := i.(Student)
+	if ok {
+		fmt.Println(s)
+	}
+}
+```
+
+这样，即使断言失败也不会 panic。
+
+断言其实还有另一种形式，就是用在利用 switch 语句判断接口的类型。每一个 case 会被顺序地考虑。当命中一个 case 时，就会执行 case 中的语句，因此 case 语句的顺序是很重要的，因为很有可能会有多个 case 匹配的情况。
+
+代码示例如下：
+
+```go
+package main
+
+import (
+	"fmt"
+)
+
+type Student struct {
+	Name string
+	Age  int
+}
+
+func judge(v interface{}) {
+	fmt.Printf("%p, %v\n", &v, v)
+	switch v := v.(type) {
+	case nil:
+		fmt.Printf("%p %v\n", &v, v)
+		fmt.Printf("nil type[%T] %v\n", v, v)
+	case Student:
+		fmt.Printf("%p %v\n", &v, v)
+		fmt.Printf("Student type[%T] %v\n", v, v)
+
+	case *Student:
+		fmt.Printf("%p %v\n", &v, v)
+		fmt.Printf("*Student type[%T] %v\n", v, v)
+
+	default:
+		fmt.Printf("%p %v\n", &v, v)
+		fmt.Printf("unknow\n")
+	}
+}
+
+func main() {
+	// var i interface{}
+	// var i interface{} = new(Student)
+	var i interface{} = (*Student)(nil)
+	judge(i)
+}
+
+```
+
+运行代码：
+```go
+// var i interface{}
+0xc000096210, <nil>
+0xc000096220 <nil>
+nil type[<nil>] <nil>
+
+// var i interface{} = new(Student)
+0xc000096210, &{ 0}
+0xc0000ac020 &{ 0}
+*Student type[*main.Student] &{ 0}
+
+// var i interface{} = (*Student)(nil)
+0xc000096210, <nil>
+0xc0000ac020 <nil>
+*Student type[*main.Student] <nil>
+```
+
+
+```go
+var i interface{}
+```
+i 是 nil 类型。
+
+
+```go
+var i interface{} = new(Student)
+```
+i 是一个 *Student 类型，匹配上第三个 case，从打印的三个地址来看，这三处的变量实际上都是不一样的。在 main 函数里有一个局部变量 i；调用函数时，实际上是复制了一份参数，因此函数里又有一个变量 v，它是 i 的拷贝；断言之后，又生成了一份新的拷贝。所以最终打印的三个变量的地址都不一样。
+
+
+```go
+var i interface{} = (*Student)(nil)
+```
+
+这里想说明的其实是 i 在这里动态类型是 (*Student), 数据为 nil，它的类型并不是 nil，它与 nil 作比较的时候，得到的结果也是 false。
+
+
+
+
+- 【引申1】 fmt.Println 函数的参数是 interface。对于内置类型，函数内部会用穷举法，得出它的真实类型，然后转换为字符串打印。而对于自定义类型，首先确定该类型是否实现了 String() 方法，如果实现了，则直接打印输出 String() 方法的结果；否则，会通过反射来遍历对象的成员进行打印。
+
+
+```go
+package main
+
+import "fmt"
+
+type Student struct {
+	Name string
+	Age  int
+}
+
+func main() {
+	var s = Student{
+		Name: "mojo",
+		Age:  18,
+	}
+
+	fmt.Println(s)
+}
+```
+
+因为 Student 结构体没有实现 String() 方法，所以 fmt.Println 会利用反射挨个打印成员变量：
+
+```go
+{mojo 18}
+```
+
+增加一个 String() 方法的实现：
+```go
+func (s Student) String() string {
+	return fmt.Sprintf("[Name: %s], [Age: %d]", s.Name, s.Age)
+}
+```
+
+打印结果：
+```go
+[Name: mojo], [Age: 18]
+```
+按照我们自定义的方法来打印了。
+
+- 【引申2】 针对上面的例子，如果改一下：
+
+
+```go
+func (s *Student) String() string {
+    return fmt.Sprintf("[Name: %s], [Age: %d]", s.Name, s.Age)
+}
+```
+
+注意看两个函数的接受者类型不同，现在 Student 结构体只有一个接受者类型为 指针类型 的 String() 函数，打印结果：
+
+```go
+{mojo 18}
+```
+
+为什么？
+
+- 类型 T 只有接受者是 T 的方法；而类型 *T 拥有接受者是 T 和 *T 的方法。语法上 T 能直接调 *T 的方法仅仅是 Go 的语法糖。
+
+所以， Student 结构体定义了接受者类型是值类型的 String() 方法时，通过
+
+```go
+fmt.Println(s)
+fmt.Println(&s)
+
+// [Name: mojo], [Age: 18]
+// [Name: mojo], [Age: 18]
+```
+
+均可以按照自定义的格式来打印。
+
+如果 Student 结构体定义了接受者类型是指针类型的 String() 方法时，只有通过
+
+```go
+fmt.Println(&s)
+
+// [Name: mojo], [Age: 18]
+```
+
+才能按照自定义的格式打印。
+
+
+
+
+
+
+## 接口的动态类型和动态值 ?
+
+
+从源码里可以看到：iface包含两个字段：tab 是接口表指针，指向类型信息；data 是数据指针，则指向具体的数据。它们分别被称为动态类型和动态值。而接口值包括动态类型和动态值。
+
+- 【引申1】接口类型和 nil 作比较
+
+接口值的零值是指动态类型和动态值都为 nil。当仅且当这两部分的值都为 nil 的情况下，这个接口值就才会被认为 接口值 == nil。
+
+来看个例子：
+
+```go
+package main
+
+import "fmt"
+
+type Coder interface {
+	code()
+}
+
+type Gopher struct {
+	name string
+}
+
+func (g Gopher) code() {
+	fmt.Printf("%s is coding\n", g.name)
+}
+
+func main() {
+	var c Coder
+	fmt.Println(c == nil)
+	fmt.Printf("c: %T, %v\n", c, c)
+
+	var g *Gopher
+	fmt.Println(g == nil)
+	fmt.Printf("g: %T, %v\n", g, g)
+
+	c = g
+	fmt.Println(c == nil)
+	fmt.Printf("c: %T, %v\n", c, c)
+}
+
+```
+
+输出：
+```go
+true
+c: <nil>, <nil>
+true
+g: *main.Gopher, <nil>
+false
+c: *main.Gopher, <nil>
+```
+
+一开始，c 的 动态类型和动态值都为 nil，g 也为 nil，当把 g 赋值给 c 后，c 的动态类型变成了 *main.Gopher，仅管 c 的动态值仍为 nil，但是当 c 和 nil 作比较的时候，结果就是 false 了。
+
+- 【引申2】 来看一个例子，看一下它的输出：
+
+```go
+package main
+
+import "fmt"
+
+type MyError struct{}
+
+func (i MyError) Error() string {
+	return "MyError"
+}
+
+func process() error {
+	var err *MyError = nil
+	return err // 隐含类型转换 
+}
+
+func main() {
+	err := process()
+	fmt.Println(err)
+	fmt.Println(err == nil)
+	fmt.Printf("err: %T, %v\n", err, err)
+}
+
+// <nil>
+// false
+// err: *main.MyError, <nil>
+```
+
+这里先定义了一个 MyError 结构体，实现了 Error 函数，也就实现了 error 接口。Process 函数返回了一个 error 接口，这块隐含了类型转换。所以，虽然它的值是 nil，其实它的类型是 *MyError，最后和 nil 比较的时候，结果为 false。
+
+
+
+- 【引申3】如何打印出接口的动态类型和值？
+
+```go
+package main
+
+import (
+    "unsafe"
+    "fmt"
+)
+
+type iface struct {
+    itab, data uintptr
+}
+
+func main() {
+    var a interface{} = nil
+
+    var b interface{} = (*int)(nil)
+
+    x := 5
+    var c interface{} = (*int)(&x)
+
+    ia := *(*iface)(unsafe.Pointer(&a))
+    ib := *(*iface)(unsafe.Pointer(&b))
+    ic := *(*iface)(unsafe.Pointer(&c))
+
+    fmt.Println(ia, ib, ic)
+
+    fmt.Println(*(*int)(unsafe.Pointer(ic.data)))
+}
+```
+
+代码里直接定义了一个 iface 结构体，用两个指针来描述 itab 和 data，之后将 a, b, c 在内存中的内容强制解释成我们自定义的 iface。最后就可以打印出动态类型和动态值的地址。
+
+```go
+{0 0} {17359136 0} {17359136 824634322632}
+5
+```
+
+a 的动态类型和动态值的地址均为 0，也就是 nil；b 的动态类型和 c 的动态类型一致，都是 *int；最后，c 的动态值为 5。
+
+
+
+
+
+
+
+
+
 
 
 
