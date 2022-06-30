@@ -9,6 +9,15 @@ func a() {
 	return
 }
 
+// func b() {
+// 	var j *int
+// 	*j = 0
+// 	defer fmt.Println(*j) // 0
+// 	*j++
+// 	return
+// }
+
 func main() {
 	a()
+	// b()
 }
