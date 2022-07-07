@@ -54,6 +54,8 @@ defer语句中的fmt.Println()参数i值在defer出现时就已经确定下来�
 注意：对于指针类型参数，规则仍然适用，只不过延迟函数的参数是一个地址值，这种情况下，defer后面的语句对变量的修改可能会影响延迟函数。
 
 
+注册时参数拷贝到堆上，执行是参数从堆拷贝到栈上
+
 
 **3.2 规则二：延迟函数执行按后进先出顺序执行，即先出现的defer最后执行**
 
@@ -189,6 +191,8 @@ func main() {
 
 foo2() 函数，返回一个局部变量，同时defer函数也会操作这个局部变量。对于匿名返回值来说，可以假定仍然有一个变量存储返回值，假定返回值变量为"copy_result"，上面的返回语句可以拆分成以下过程：
 
+
+
 ```go
 copy_result = i
 i++
@@ -223,15 +227,15 @@ return
 // initialize them are not required. All defers must be manually scanned,
 // and for heap defers, marked.
 type _defer struct {
-	started bool
+	started bool // 是否已执行
 	heap    bool
 	// openDefer indicates that this _defer is for a frame with open-coded
 	// defers. We have only one defer record for the entire frame (which may
 	// currently have 0, 1, or more defers active).
 	openDefer bool
-	sp        uintptr // sp at time of defer
-	pc        uintptr // pc at time of defer
-	fn        func()  // can be nil for open-coded defers
+	sp        uintptr // sp at time of defer 调用者栈指针
+	pc        uintptr // pc at time of defer deferproc的返回地址
+	fn        func()  // can be nil for open-coded defers 注册的函数
 	_panic    *_panic // panic that is running defer
 	link      *_defer // next defer on G; can point to either heap or stack!
 
