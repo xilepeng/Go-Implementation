@@ -31,15 +31,17 @@
 | 🖌 [Interface](Interface.md)      |    ✅ 完成      |
 | 🖌 [Reflection](reflection.md)    |    ✅ 完成      |
 | ✅ [for and range]()              |    ✅ 完成      |
-| ✅ [select]()                     |    ❌ 💻      |
-| ✅ [defer]()                      |    ❌       |
-| ✅ [panic and recover ]()         |    ❌       | 
+| ✅ [select]()                     |    ❌      |
+| ✅ [defer]()                      |    ✅ 完成      |
+| ✅ [panic and recover ]()         |    ✅ 完成       | 
 | ✅ [make and new]()               |    ❌       |
+| ✅ [error]()                      |    ❌       |
 | 📝 [Goroutine](Goroutine.md)      |    ✅ 完成       |
 | 📝 [Channel](channel.md)          |    ✅ 完成       |
 | 🛠 [Gc](gc.md)                    |    ❌       |
 | 🛠 [内存对齐]()                    |    ❌       |
 | 👀 [Lib](lib.md)                  |    ❌       |
+
 
 
 
