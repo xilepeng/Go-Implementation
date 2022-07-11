@@ -17,8 +17,8 @@
 | ✅ [select](select.md)            |    ❌        |
 | ✅ [defer](defer.md)              |    ✅ 完成      |
 | ✅ [panic and recover ](panic-recover.md)          |    ✅ 完成       | 
-| ✅ [make and new](make-new.md)    |    ❌       |
-| ✅ [error](error.md)              |    ❌       |
+| ✅ [make and new](make-new.md)    |    ✅ 完成       |
+| ✅ [error](error.md)              |    ✅ 完成      |
 | 📝 [Goroutine](Goroutine.md)      |    ✅ 完成       |
 | 📝 [Channel](channel.md)          |    ✅ 完成       |
 | 🛠 [Gc](gc.md)                    |    ❌       |

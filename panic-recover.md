@@ -188,3 +188,16 @@ func gopanic(e interface{}) {
 	*(*int)(nil) = 0
 }
 ```
+
+
+
+
+
+
+
+
+
+
+
+panic 方法实际上就是处理当前 Goroutine(g) 上所挂载的 ._panic 链表（所以无法对其他 Goroutine 的异常事件响应），然后对其所属的 defer 链表和 recover 进行检测并处理，最后调用退出命令中止应用程序
+
