@@ -1,5 +1,10 @@
 
 
+select 是操作系统中的系统调用，我们经常会使用 select、poll 和 epoll 等函数构建 I/O 多路复用模型提升程序的性能。Go 语言的 select 与操作系统中的 select 比较相似，本节会介绍 Go 语言 select 关键字常见的现象、数据结构以及实现原理。
+
+C 语言的 select 系统调用可以同时监听多个文件描述符的可读或者可写的状态，Go 语言中的 select 也能够让 Goroutine 同时等待多个 Channel 可读或者可写，在多个文件或者 Channel状态改变之前，select 会一直阻塞当前线程或者 Goroutine。
+
+
 
 
 我们简单总结一下 select 结构的执行过程与实现原理，首先在编译期间，Go 语言会对 select 语句进行优化，它会根据 select 中 case 的不同选择不同的优化路径：
@@ -27,3 +32,12 @@ select 关键字是 Go 语言特有的控制结构，它的实现原理比较复
 参考：
 
 [《Go 语言设计与实现》](https://draveness.me/golang/docs/part2-foundation/ch05-keyword/golang-select/#52-select)
+
+
+
+
+- select语句中除default外，每个case操作一个channel，要么读要么写
+- select语句中除default外，各case执行顺序是随机的
+- select语句中如果没有default语句，则会阻塞等待任一case
+- select语句中读操作要判断是否成功读取，关闭的channel也可以读取
+
