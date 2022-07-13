@@ -7,7 +7,7 @@
 |  目标                             | 快速完成        |
 |  :---------------                | :------------: |
 | 👀 [ASM](asm.md)                  |    ✅ 完成      |
-| 🌃 [Build and Link](build.md)     |    ❌       |
+| 🌃 [Build and Link](build.md)     |    ❌ 7.15完成  |
 | ✅ [Array Vs Slice](slice.md)     |    ✅ 完成      |
 | ✅ [Map](Map.md)                  |    ✅ 完成      |
 | ✅ [String](String.md)            |    ✅ 完成      |
@@ -15,15 +15,15 @@
 | 🖌 [Reflection](reflection.md)    |    ✅ 完成      |
 | ✅ [for and range](for-range.md)  |    ✅ 完成      |
 | ✅ [select](select.md)            |    ✅ 完成      |
-| ✅ [defer](defer.md)                       |    ✅ 完成      |
+| ✅ [defer](defer.md)              |    ✅ 完成      |
 | ✅ [panic and recover ](panic-recover.md) |✅ 完成       | 
 | ✅ [make and new](make-new.md)    |    ✅ 完成       |
 | ✅ [error](error.md)              |    ✅ 完成      |
 | 📝 [Goroutine](Goroutine.md)      |    ✅ 完成       |
 | 📝 [Channel](channel.md)          |    ✅ 完成       |
-| 🛠 [Gc](gc.md)                    |    ❌       |
-| 🛠 [内存对齐](memory.md)           |    ❌       |
-| 👀 [Lib](lib.md)                  |    ❌       |
+| 🛠 [Gc](gc.md)                    |    ❌ 7.14完成   |
+| 🛠 [内存对齐](memory.md)           |    ❌ 7.14完成   |
+| 👀 [Lib](lib.md)                  |    ❌ 7.15完成   |
 
 
 
@@ -31,8 +31,6 @@
 
 ## to do list
 
-1. 上午完成 Interface
-2. 下午完成 Reflection
 
 
 
