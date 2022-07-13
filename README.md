@@ -14,7 +14,7 @@
 | 🖌 [Interface](Interface.md)      |    ✅ 完成      |
 | 🖌 [Reflection](reflection.md)    |    ✅ 完成      |
 | ✅ [for and range](for-range.md)  |    ✅ 完成      |
-| ✅ [select](select.md)            |    ❌        |
+| ✅ [select](select.md)            |    ✅ 完成      |
 | ✅ [defer](defer.md)              |    ✅ 完成      |
 | ✅ [panic and recover ](panic-recover.md)          |    ✅ 完成       | 
 | ✅ [make and new](make-new.md)    |    ✅ 完成       |
