@@ -7,7 +7,7 @@
 |  目标                             | 快速完成        |
 |  :---------------                | :------------: |
 | 👀 [ASM](asm.md)                  |    ✅ 完成      |
-| 🌃 [Build and Link](build.md)     |    ❌ 7.15完成  |
+| 🌃 [Build and Link](build.md)     |    ❌ 完成  |
 | ✅ [Array Vs Slice](slice.md)     |    ✅ 完成      |
 | ✅ [Map](Map.md)                  |    ✅ 完成      |
 | ✅ [String](String.md)            |    ✅ 完成      |
@@ -21,9 +21,9 @@
 | ✅ [error](error.md)              |    ✅ 完成      |
 | 📝 [Goroutine](Goroutine.md)      |    ✅ 完成       |
 | 📝 [Channel](channel.md)          |    ✅ 完成       |
-| 🛠 [Gc](gc.md)                    |    ❌ 7.14完成   |
-| 🛠 [内存对齐](memory.md)           |    ❌ 7.14完成   |
-| 👀 [Lib](lib.md)                  |    ❌ 7.15完成   |
+| 🛠 [Gc](gc.md)                    |    ✅ 完成       |
+| 🛠 [内存对齐](memory.md)           |    ❌ 完成       |
+| 👀 [Lib](lib.md)                  |    ❌ 完成       |
 
 
 
