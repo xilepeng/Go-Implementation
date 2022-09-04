@@ -5,7 +5,7 @@
 ```go
 git lfs install
 
-git lfs track "*.key"
+git lfs track "*.mp4"
 
 git add .gitattributes
 
@@ -22,7 +22,7 @@ To reinstall 3.0.2, run:
 ➜  ~ git lfs install
 Updated git hooks.
 Git LFS initialized.
-➜  ~ git lfs track "*.key"
-Tracking "*.key"
+➜  ~ git lfs track "*.mp4"
+Tracking "*.mp4"
 ➜  ~ git add .gitattributes
 ```
